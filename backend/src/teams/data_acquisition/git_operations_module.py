@@ -3,6 +3,7 @@ GitOperationsModule - TEAM Data Acquisition
 
 Handles Git repository operations including shallow cloning for RepoChat v1.0.
 Provides secure and robust repository cloning functionality with comprehensive logging.
+Enhanced with Personal Access Token (PAT) support for private repositories.
 """
 
 import os
@@ -31,6 +32,7 @@ class GitOperationsModule:
     
     Provides functionality to clone repositories safely with comprehensive
     error handling and logging for debugging and monitoring.
+    Enhanced with Personal Access Token (PAT) support for private repositories.
     """
     
     def __init__(self, base_temp_dir: Optional[str] = None):
@@ -133,6 +135,53 @@ class GitOperationsModule:
             log_function_exit(self.logger, "_validate_repository_url", result=False)
             return False
     
+    def _build_authenticated_url(self, repository_url: str, pat: str) -> str:
+        """
+        Build authenticated URL with PAT for private repositories.
+        
+        Args:
+            repository_url: Original repository URL
+            pat: Personal Access Token
+            
+        Returns:
+            Authenticated URL with embedded PAT
+        """
+        log_function_entry(self.logger, "_build_authenticated_url", repository_url=repository_url)
+        
+        # Don't process SSH URLs - they use SSH key authentication
+        if repository_url.startswith('git@'):
+            self.logger.info("SSH URL detected, returning original URL (PAT not applicable)")
+            log_function_exit(self.logger, "_build_authenticated_url", result="ssh_unchanged")
+            return repository_url
+        
+        try:
+            parsed = urlparse(repository_url)
+            
+            # Build authenticated URL for HTTPS
+            if parsed.scheme in ['http', 'https']:
+                # Format: https://token@host/path
+                authenticated_url = f"{parsed.scheme}://{pat}@{parsed.netloc}{parsed.path}"
+                
+                self.logger.info("Built authenticated URL with PAT", extra={
+                    'extra_data': {
+                        'original_host': parsed.netloc,
+                        'scheme': parsed.scheme,
+                        'pat_length': len(pat)
+                    }
+                })
+                
+                log_function_exit(self.logger, "_build_authenticated_url", result="authenticated_url_built")
+                return authenticated_url
+            else:
+                self.logger.warning(f"Unsupported scheme for PAT authentication: {parsed.scheme}")
+                log_function_exit(self.logger, "_build_authenticated_url", result="unsupported_scheme")
+                return repository_url
+                
+        except Exception as e:
+            self.logger.error(f"Error building authenticated URL: {e}", exc_info=True)
+            log_function_exit(self.logger, "_build_authenticated_url", result="error")
+            return repository_url
+    
     def _generate_clone_path(self, repository_url: str) -> Path:
         """
         Generate a unique temporary directory path for cloning.
@@ -171,13 +220,15 @@ class GitOperationsModule:
         
         return clone_path
     
-    def clone_repository(self, repository_url: str, target_path: Optional[str] = None) -> Optional[str]:
+    def clone_repository(self, repository_url: str, target_path: Optional[str] = None, pat: Optional[str] = None) -> Optional[str]:
         """
         Clone a Git repository with shallow clone (--depth 1) for efficiency.
+        Enhanced with Personal Access Token (PAT) support for private repositories.
         
         Args:
             repository_url: URL of the repository to clone
             target_path: Optional target directory path. If None, auto-generates temp path.
+            pat: Optional Personal Access Token for private repositories
             
         Returns:
             Path to the cloned repository directory on success, None on failure
@@ -191,10 +242,16 @@ class GitOperationsModule:
             self.logger, 
             "clone_repository", 
             repository_url=repository_url,
-            target_path=target_path
+            target_path=target_path,
+            has_pat=pat is not None
         )
         
-        self.logger.info(f"Starting repository clone: {repository_url}")
+        self.logger.info(f"Starting repository clone: {repository_url}", extra={
+            'extra_data': {
+                'has_pat': pat is not None,
+                'target_path': target_path
+            }
+        })
         
         # Validation
         if not self._validate_repository_url(repository_url):
@@ -209,6 +266,12 @@ class GitOperationsModule:
         else:
             clone_path = self._generate_clone_path(repository_url)
         
+        # Prepare URL for cloning (with PAT if provided)
+        clone_url = repository_url
+        if pat:
+            clone_url = self._build_authenticated_url(repository_url, pat)
+            self.logger.info("Using PAT for repository authentication")
+        
         try:
             # Ensure target directory doesn't exist
             if clone_path.exists():
@@ -220,9 +283,10 @@ class GitOperationsModule:
             
             self.logger.info(f"Cloning repository to: {clone_path}", extra={
                 'extra_data': {
-                    'repository_url': repository_url,
+                    'repository_url': repository_url,  # Log original URL (not with PAT)
                     'clone_path': str(clone_path),
-                    'method': 'shallow_clone'
+                    'method': 'shallow_clone',
+                    'authenticated': pat is not None
                 }
             })
             
@@ -230,7 +294,7 @@ class GitOperationsModule:
             clone_start_time = time.time()
             
             repo = Repo.clone_from(
-                url=repository_url,
+                url=clone_url,  # Use potentially authenticated URL
                 to_path=str(clone_path),
                 depth=1,  # Shallow clone for efficiency
                 branch=None,  # Clone default branch
@@ -252,7 +316,8 @@ class GitOperationsModule:
                 clone_duration * 1000,
                 "ms",
                 repository_url=repository_url,
-                clone_size_mb=repo_info.get('size_mb', 0)
+                clone_size_mb=repo_info.get('size_mb', 0),
+                authenticated=pat is not None
             )
             
             self.logger.info(f"Repository cloned successfully: {clone_path}", extra={
@@ -260,9 +325,15 @@ class GitOperationsModule:
                     'repository_url': repository_url,
                     'clone_path': str(clone_path),
                     'clone_duration_ms': clone_duration * 1000,
-                    'repository_info': repo_info
+                    'repository_info': repo_info,
+                    'authenticated': pat is not None
                 }
             })
+            
+            # Clear PAT from memory immediately after use
+            if pat:
+                pat = None  # Clear PAT reference
+                self.logger.debug("PAT cleared from memory after use")
             
             total_duration = time.time() - start_time
             log_function_exit(

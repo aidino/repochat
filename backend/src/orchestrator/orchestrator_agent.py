@@ -19,7 +19,8 @@ from shared.utils.logging_config import (
     log_performance_metric
 )
 from shared.models.task_definition import TaskDefinition
-from teams.data_acquisition import GitOperationsModule, LanguageIdentifierModule
+from shared.models.project_data_context import ProjectDataContext
+from teams.data_acquisition import GitOperationsModule, LanguageIdentifierModule, DataPreparationModule, PATHandlerModule
 
 
 class OrchestratorAgent:
@@ -106,7 +107,18 @@ class OrchestratorAgent:
             self.logger.debug("Initializing TEAM Data Acquisition...")
             self.git_operations = GitOperationsModule()
             self.language_identifier = LanguageIdentifierModule()
-            self.logger.info("GitOperationsModule and LanguageIdentifierModule initialized successfully")
+            self.data_preparation = DataPreparationModule()
+            self.pat_handler = PATHandlerModule()
+            self.logger.info("TEAM Data Acquisition components initialized successfully", extra={
+                'extra_data': {
+                    'components': [
+                        'GitOperationsModule',
+                        'LanguageIdentifierModule', 
+                        'DataPreparationModule',
+                        'PATHandlerModule'
+                    ]
+                }
+            })
             
             # Future phases will add:
             # - LangGraph workflow engine setup
@@ -126,7 +138,9 @@ class OrchestratorAgent:
                     'status': 'initialized',
                     'components_initialized': [
                         'GitOperationsModule',
-                        'LanguageIdentifierModule'
+                        'LanguageIdentifierModule',
+                        'DataPreparationModule',
+                        'PATHandlerModule'
                     ]
                 }
             })
@@ -420,6 +434,187 @@ class OrchestratorAgent:
             raise
         
         return execution_id
+    
+    def handle_scan_project_task(self, task_definition: TaskDefinition) -> ProjectDataContext:
+        """
+        Handle scan project task according to Task 1.5 requirements.
+        
+        This method implements Task 1.5 (F1.5) DoD:
+        - Takes TaskDefinition containing repository_url
+        - Calls GitOperationsModule and LanguageIdentifierModule sequentially
+        - Integrates PATHandlerModule for private repository support
+        - Uses DataPreparationModule to create ProjectDataContext
+        - Logs ProjectDataContext result
+        
+        Args:
+            task_definition: TaskDefinition with repository_url
+            
+        Returns:
+            ProjectDataContext with cloned repository path and detected languages
+            
+        Raises:
+            RuntimeError: If orchestrator is not initialized
+            Exception: If any step in the workflow fails
+        """
+        start_time = time.time()
+        log_function_entry(
+            self.logger,
+            "handle_scan_project_task",
+            repository_url=task_definition.repository_url,
+            task_id=task_definition.task_id
+        )
+        
+        self.logger.info(f"Starting scan project task for: {task_definition.repository_url}")
+        
+        # Validation
+        if not self._is_initialized:
+            error_msg = "Orchestrator Agent is not initialized"
+            self.logger.error(error_msg)
+            log_function_exit(self.logger, "handle_scan_project_task", result="not_initialized")
+            raise RuntimeError(error_msg)
+        
+        try:
+            # Step 1: Check if PAT is needed and request if necessary
+            self.logger.info("Step 1: Checking PAT requirements")
+            step1_start = time.time()
+            
+            pat = self.pat_handler.request_pat_if_needed(task_definition.repository_url)
+            pat_message = "PAT obtained from user" if pat else "No PAT needed/provided"
+            
+            step1_duration = time.time() - step1_start
+            self.logger.info(f"Step 1 completed: {pat_message}", extra={
+                'extra_data': {
+                    'step': 'pat_check',
+                    'duration_ms': step1_duration * 1000,
+                    'has_pat': pat is not None
+                }
+            })
+            
+            # Step 2: Clone repository using GitOperationsModule (with PAT if available)
+            self.logger.info("Step 2: Cloning repository")
+            step2_start = time.time()
+            
+            repository_path = self.git_operations.clone_repository(
+                repository_url=task_definition.repository_url,
+                pat=pat
+            )
+            
+            step2_duration = time.time() - step2_start
+            self.logger.info(f"Step 2 completed: Repository cloned to {repository_path}", extra={
+                'extra_data': {
+                    'step': 'repository_clone',
+                    'duration_ms': step2_duration * 1000,
+                    'repository_path': repository_path,
+                    'used_pat': pat is not None
+                }
+            })
+            
+            # Step 3: Identify languages using LanguageIdentifierModule
+            self.logger.info("Step 3: Identifying programming languages")
+            step3_start = time.time()
+            
+            detected_languages = self.language_identifier.identify_languages(
+                repository_path=repository_path
+            )
+            
+            step3_duration = time.time() - step3_start
+            self.logger.info(f"Step 3 completed: Languages detected: {detected_languages}", extra={
+                'extra_data': {
+                    'step': 'language_identification',
+                    'duration_ms': step3_duration * 1000,
+                    'detected_languages': detected_languages,
+                    'language_count': len(detected_languages)
+                }
+            })
+            
+            # Step 4: Create ProjectDataContext using DataPreparationModule
+            self.logger.info("Step 4: Creating ProjectDataContext")
+            step4_start = time.time()
+            
+            project_data_context = self.data_preparation.create_project_context(
+                cloned_code_path=repository_path,
+                detected_languages=detected_languages,
+                repository_url=task_definition.repository_url
+            )
+            
+            step4_duration = time.time() - step4_start
+            
+            # Log ProjectDataContext as required by DoD
+            self.logger.info("ProjectDataContext created successfully:", extra={
+                'extra_data': {
+                    'step': 'data_context_creation',
+                    'duration_ms': step4_duration * 1000,
+                    'project_data_context': {
+                        'cloned_code_path': project_data_context.cloned_code_path,
+                        'detected_languages': project_data_context.detected_languages,
+                        'repository_url': project_data_context.repository_url,
+                        'language_count': project_data_context.language_count,
+                        'has_languages': project_data_context.has_languages,
+                        'primary_language': project_data_context.primary_language
+                    }
+                }
+            })
+            
+            # Clear PAT from memory for security
+            if pat:
+                self.pat_handler.clear_pat_cache()
+                pat = None  # Clear local reference
+                self.logger.debug("PAT cleared from memory for security")
+            
+            total_duration = time.time() - start_time
+            
+            self.logger.info("Scan project task completed successfully", extra={
+                'extra_data': {
+                    'repository_url': task_definition.repository_url,
+                    'total_duration_ms': total_duration * 1000,
+                    'steps_completed': 4,
+                    'final_result': {
+                        'repository_path': repository_path,
+                        'languages': detected_languages,
+                        'context_created': True
+                    }
+                }
+            })
+            
+            log_performance_metric(
+                self.logger,
+                "scan_project_task_duration",
+                total_duration * 1000,
+                "ms",
+                repository_url=task_definition.repository_url,
+                language_count=len(detected_languages)
+            )
+            
+            log_function_exit(
+                self.logger,
+                "handle_scan_project_task",
+                result="success",
+                execution_time=total_duration
+            )
+            
+            return project_data_context
+            
+        except Exception as e:
+            # Clear PAT on error for security
+            if 'pat' in locals() and pat:
+                self.pat_handler.clear_pat_cache()
+                
+            error_msg = f"Error in scan project task: {e}"
+            self.logger.error(error_msg, exc_info=True, extra={
+                'extra_data': {
+                    'repository_url': task_definition.repository_url,
+                    'error_type': type(e).__name__,
+                    'execution_time_ms': (time.time() - start_time) * 1000
+                }
+            })
+            
+            log_function_exit(
+                self.logger,
+                "handle_scan_project_task",
+                result="error",
+                execution_time=time.time() - start_time
+            )
+            raise
     
     def get_task_status(self, execution_id: str) -> Optional[dict]:
         """
