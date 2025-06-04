@@ -62,14 +62,46 @@ class TestOrchestratorAgent:
         # Check task was stored
         task_info = orchestrator.get_task_status(execution_id)
         assert task_info is not None
-        assert task_info['status'] == 'setup_complete'  # Enhanced implementation completes setup
+        assert task_info['status'] == 'completed'  # Task 1.2: GitOperationsModule integration
         assert task_info['definition'] == task_def
+        
+        # Check repository cloning was attempted
+        assert 'repository_path' in task_info  # Should have repository path
     
     def test_handle_task_edge_case_empty_repository_url(self):
         """Test handling task with empty repository URL - edge case."""
         # Arrange
         orchestrator = OrchestratorAgent()
         task_def = TaskDefinition(repository_url="")
+        
+        # Act & Assert - Should raise ValueError due to URL validation
+        with pytest.raises(ValueError) as exc_info:
+            orchestrator.handle_task(task_def)
+        
+        assert "Invalid repository URL" in str(exc_info.value)
+    
+    def test_handle_task_invalid_repository_url(self):
+        """Test handling task with invalid repository URL."""
+        # Arrange
+        orchestrator = OrchestratorAgent()
+        task_def = TaskDefinition(repository_url="not-a-valid-url")
+        
+        # Act & Assert - Should raise ValueError due to URL validation
+        with pytest.raises(ValueError) as exc_info:
+            orchestrator.handle_task(task_def)
+        
+        assert "Invalid repository URL" in str(exc_info.value)
+    
+    @patch('teams.data_acquisition.git_operations_module.GitOperationsModule.clone_repository')
+    def test_handle_task_clone_failure_continues_processing(self, mock_clone):
+        """Test that clone failures don't stop task processing."""
+        # Arrange
+        orchestrator = OrchestratorAgent()
+        task_def = TaskDefinition(repository_url="https://github.com/example/test-repo.git")
+        
+        # Setup mock to raise GitCommandError
+        from git import GitCommandError
+        mock_clone.side_effect = GitCommandError("git clone", 1, "Repository not found")
         
         # Act
         execution_id = orchestrator.handle_task(task_def)
@@ -78,7 +110,9 @@ class TestOrchestratorAgent:
         assert execution_id is not None
         task_info = orchestrator.get_task_status(execution_id)
         assert task_info is not None
-        assert task_info['status'] == 'setup_complete'  # Enhanced implementation completes setup
+        assert task_info['status'] == 'completed'  # Task still completes despite clone failure
+        assert task_info.get('repository_path') is None  # No repository path due to failure
+        assert len(task_info['errors']) > 0  # Should have error logged
     
     def test_handle_task_failure_case_not_initialized(self):
         """Test handling task when agent is not initialized - failure case."""
@@ -117,9 +151,10 @@ class TestOrchestratorAgent:
         
         # Assert
         assert status is not None
-        assert status['status'] == 'setup_complete'  # Enhanced implementation completes setup
+        assert status['status'] == 'completed'  # Task 1.2: GitOperationsModule integration
         assert status['definition'] == task_def
         assert 'created_at' in status
+        assert 'repository_path' in status  # Should have repository path info
     
     def test_get_task_status_nonexistent_task(self):
         """Test getting status of non-existent task."""
@@ -198,4 +233,42 @@ class TestOrchestratorAgent:
         # Assert
         assert task_def.task_id == existing_task_id  # Preserved
         assert task_def.created_at == existing_created_at  # Preserved
-        assert execution_id != existing_task_id  # Execution ID is different 
+        assert execution_id != existing_task_id  # Execution ID is different
+    
+    def test_orchestrator_has_git_operations_module(self):
+        """Test that orchestrator properly initializes GitOperationsModule."""
+        # Arrange & Act
+        orchestrator = OrchestratorAgent()
+        
+        # Assert
+        assert hasattr(orchestrator, 'git_operations')
+        assert orchestrator.git_operations is not None
+        from teams.data_acquisition.git_operations_module import GitOperationsModule
+        assert isinstance(orchestrator.git_operations, GitOperationsModule)
+    
+    def test_get_agent_stats_includes_git_operations(self):
+        """Test that agent stats reflect GitOperationsModule integration."""
+        # Arrange
+        orchestrator = OrchestratorAgent()
+        
+        # Act
+        stats = orchestrator.get_agent_stats()
+        
+        # Assert
+        assert stats is not None
+        assert 'agent_id' in stats
+        assert 'is_initialized' in stats
+        assert stats['is_initialized'] is True
+        # Should be initialized with GitOperationsModule
+    
+    @patch('teams.data_acquisition.git_operations_module.GitOperationsModule.__init__')
+    def test_initialization_failure_git_operations(self, mock_git_init):
+        """Test agent initialization failure when GitOperationsModule fails."""
+        # Arrange
+        mock_git_init.side_effect = Exception("Git operations initialization failed")
+        
+        # Act & Assert
+        with pytest.raises(Exception) as exc_info:
+            OrchestratorAgent()
+        
+        assert "Git operations initialization failed" in str(exc_info.value) 

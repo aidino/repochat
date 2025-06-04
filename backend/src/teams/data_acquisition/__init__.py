@@ -1,17 +1,19 @@
 """
-TEAM Data Acquisition
+TEAM Data Acquisition - RepoChat v1.0
 
-Responsible for:
-- Git repository operations (clone, fetch)
-- Programming language identification
-- Project data context preparation
-- Personal Access Token (PAT) handling
-- Repository metadata extraction
+Handles data acquisition operations including:
+- Git repository cloning and management
+- Code file extraction and organization  
+- Repository metadata collection
+- File system operations
 
-Main components to be implemented:
-- GitOperationsModule
-- LanguageIdentifierModule
-- DataPreparationModule
-- PATHandlerModule
-- PRMetadataExtractorAgent
+Core Components:
+- GitOperationsModule: Git repository operations and cloning
 """
+
+# Team Data Acquisition imports
+from .git_operations_module import GitOperationsModule
+
+__all__ = [
+    'GitOperationsModule'
+]

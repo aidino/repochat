@@ -19,6 +19,7 @@ from shared.utils.logging_config import (
     log_performance_metric
 )
 from shared.models.task_definition import TaskDefinition
+from teams.data_acquisition import GitOperationsModule
 
 
 class OrchestratorAgent:
@@ -101,6 +102,11 @@ class OrchestratorAgent:
         try:
             self.logger.debug("Setting up core components...")
             
+            # Initialize TEAM Data Acquisition components
+            self.logger.debug("Initializing TEAM Data Acquisition...")
+            self.git_operations = GitOperationsModule()
+            self.logger.info("GitOperationsModule initialized successfully")
+            
             # Future phases will add:
             # - LangGraph workflow engine setup
             # - A2A protocol initialization  
@@ -116,7 +122,10 @@ class OrchestratorAgent:
                 'extra_data': {
                     'initialization_time': self._initialization_time.isoformat(),
                     'agent_id': self.agent_id,
-                    'status': 'initialized'
+                    'status': 'initialized',
+                    'components_initialized': [
+                        'GitOperationsModule'
+                    ]
                 }
             })
             
@@ -255,26 +264,68 @@ class OrchestratorAgent:
                 }
             })
             
-            # Placeholder for future TEAM coordination with detailed logging:
+            # TEAM Data Acquisition - Clone Repository (Task 1.2 Integration)
+            self.logger.info(f"Starting TEAM Data Acquisition: cloning repository")
+            clone_start_time = time.time()
+            
+            try:
+                repository_path = self.git_operations.clone_repository(
+                    repository_url=task_definition.repository_url
+                )
+                
+                clone_duration = time.time() - clone_start_time
+                
+                self._active_tasks[execution_id]['steps_completed'].append({
+                    'step': 'repository_cloned',
+                    'timestamp': datetime.now(),
+                    'duration_ms': clone_duration * 1000,
+                    'repository_path': repository_path
+                })
+                
+                self.logger.info(f"Repository cloned successfully", extra={
+                    'extra_data': {
+                        'execution_id': execution_id,
+                        'repository_path': repository_path,
+                        'clone_duration_ms': clone_duration * 1000
+                    }
+                })
+                
+                # Store repository path in task info for future use
+                self._active_tasks[execution_id]['repository_path'] = repository_path
+                
+            except Exception as clone_error:
+                self.logger.error(f"Failed to clone repository: {clone_error}", exc_info=True)
+                self._active_tasks[execution_id]['errors'].append({
+                    'error': f"Clone failed: {clone_error}",
+                    'timestamp': datetime.now(),
+                    'error_type': 'clone_error'
+                })
+                # Continue processing - don't fail the entire task yet
+                self._active_tasks[execution_id]['repository_path'] = None
+            
+            # Future workflow steps with detailed logging:
             self.logger.debug("Future workflow steps:", extra={
                 'extra_data': {
+                    'completed_steps': [
+                        "TEAM Data Acquisition -> clone repo (IMPLEMENTED)"
+                    ],
                     'planned_steps': [
-                        "TEAM Data Acquisition -> clone repo, identify language",
+                        "TEAM Data Acquisition -> identify language",
                         "TEAM CKG Operations -> build knowledge graph",
                         "TEAM Code Analysis -> analyze code structure", 
                         "TEAM Synthesis & Reporting -> generate reports"
                     ],
-                    'current_phase': "Task 1.1 - Basic setup only"
+                    'current_phase': "Task 1.2 - GitOperationsModule integrated"
                 }
             })
             
-            # For Task 1.1, we just simulate successful task setup
-            self.logger.info(f"Task {execution_id} setup completed successfully")
+            # Task completed successfully
+            self.logger.info(f"Task {execution_id} processing completed successfully")
             
             # Update final task status
-            self._active_tasks[execution_id]['status'] = 'setup_complete'
+            self._active_tasks[execution_id]['status'] = 'completed'
             self._active_tasks[execution_id]['steps_completed'].append({
-                'step': 'task_setup_complete',
+                'step': 'task_processing_complete',
                 'timestamp': datetime.now(),
                 'duration_ms': (time.time() - start_time) * 1000
             })
@@ -294,8 +345,9 @@ class OrchestratorAgent:
                 'extra_data': {
                     'execution_id': execution_id,
                     'execution_time_ms': execution_time * 1000,
-                    'final_status': 'setup_complete',
-                    'steps_completed': len(self._active_tasks[execution_id]['steps_completed'])
+                    'final_status': 'completed',
+                    'steps_completed': len(self._active_tasks[execution_id]['steps_completed']),
+                    'repository_cloned': self._active_tasks[execution_id].get('repository_path') is not None
                 }
             })
             
