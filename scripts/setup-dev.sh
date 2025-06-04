@@ -44,7 +44,7 @@ check_docker() {
         exit 1
     fi
     
-    if ! command_exists docker-compose; then
+    if ! command_exists docker compose; then
         log_error "Docker Compose is not installed. Please install Docker Compose first."
         echo "Installation instructions: https://docs.docker.com/compose/install/"
         exit 1
@@ -60,7 +60,7 @@ check_docker() {
     
     # Show versions
     docker_version=$(docker --version)
-    compose_version=$(docker-compose --version)
+    compose_version=$(docker compose --version)
     log "Docker version: $docker_version"
     log "Docker Compose version: $compose_version"
 }
@@ -110,7 +110,7 @@ build_images() {
     
     # Build backend image
     log "Building backend image..."
-    docker-compose build backend
+    docker compose build backend
     log_success "Backend image built successfully"
     
     # Note: Frontend will be built in later phases
@@ -122,14 +122,14 @@ start_services() {
     log "Starting RepoChat services..."
     
     # Start only backend and Neo4j (no frontend in Phase 1)
-    docker-compose up -d neo4j
+    docker compose up -d neo4j
     log "Waiting for Neo4j to be healthy..."
     
     # Wait for Neo4j to be ready
     max_attempts=30
     attempt=0
     while [ $attempt -lt $max_attempts ]; do
-        if docker-compose exec -T neo4j cypher-shell -u neo4j -p repochat123 "RETURN 1" >/dev/null 2>&1; then
+        if docker compose exec -T neo4j cypher-shell -u neo4j -p repochat123 "RETURN 1" >/dev/null 2>&1; then
             log_success "Neo4j is ready!"
             break
         fi
@@ -145,11 +145,11 @@ start_services() {
     fi
     
     # Start backend
-    docker-compose up -d backend
+    docker compose up -d backend
     log_success "Backend service started"
     
     # Show service status
-    docker-compose ps
+    docker compose ps
 }
 
 # Function to show useful information
@@ -168,17 +168,17 @@ show_info() {
     echo "  💾 Neo4j data: ./data/neo4j/"
     echo
     echo "🛠️  Useful commands:"
-    echo "  📊 View logs: docker-compose logs -f backend"
-    echo "  🔄 Restart backend: docker-compose restart backend"
-    echo "  ⏹️  Stop all: docker-compose down"
-    echo "  🗑️  Clean up: docker-compose down -v --remove-orphans"
+    echo "  📊 View logs: docker compose logs -f backend"
+    echo "  🔄 Restart backend: docker compose restart backend"
+    echo "  ⏹️  Stop all: docker compose down"
+    echo "  🗑️  Clean up: docker compose down -v --remove-orphans"
     echo
     echo "🧪 Run tests:"
-    echo "  docker-compose exec backend python -m pytest tests/ -v"
+    echo "  docker compose exec backend python -m pytest tests/ -v"
     echo
     echo "🐛 Debug:"
     echo "  VS Code can attach to debug port 5678"
-    echo "  Or exec into container: docker-compose exec backend bash"
+    echo "  Or exec into container: docker compose exec backend bash"
 }
 
 # Function to run tests
@@ -188,11 +188,11 @@ run_tests() {
     # Wait a bit for backend to be ready
     sleep 5
     
-    if docker-compose exec -T backend python -m pytest tests/ -v; then
+    if docker compose exec -T backend python -m pytest tests/ -v; then
         log_success "All tests passed!"
     else
         log_warning "Some tests failed. Check the logs for details."
-        log "You can run tests manually with: docker-compose exec backend python -m pytest tests/ -v"
+        log "You can run tests manually with: docker compose exec backend python -m pytest tests/ -v"
     fi
 }
 

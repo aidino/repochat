@@ -13,7 +13,7 @@ neo4j>=5.0.0
 
 # Code parsing
 javalang>=0.13.0  # Java parser
-ast>=3.0.0  # Python AST (built-in)
+# ast - Python AST (built-in module, không cần install)
 
 # Git operations
 gitpython>=3.1.0

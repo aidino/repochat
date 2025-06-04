@@ -62,7 +62,7 @@ class TestOrchestratorAgent:
         # Check task was stored
         task_info = orchestrator.get_task_status(execution_id)
         assert task_info is not None
-        assert task_info['status'] == 'in_progress'
+        assert task_info['status'] == 'setup_complete'  # Enhanced implementation completes setup
         assert task_info['definition'] == task_def
     
     def test_handle_task_edge_case_empty_repository_url(self):
@@ -78,7 +78,7 @@ class TestOrchestratorAgent:
         assert execution_id is not None
         task_info = orchestrator.get_task_status(execution_id)
         assert task_info is not None
-        assert task_info['status'] == 'in_progress'
+        assert task_info['status'] == 'setup_complete'  # Enhanced implementation completes setup
     
     def test_handle_task_failure_case_not_initialized(self):
         """Test handling task when agent is not initialized - failure case."""
@@ -117,7 +117,7 @@ class TestOrchestratorAgent:
         
         # Assert
         assert status is not None
-        assert status['status'] == 'in_progress'
+        assert status['status'] == 'setup_complete'  # Enhanced implementation completes setup
         assert status['definition'] == task_def
         assert 'created_at' in status
     

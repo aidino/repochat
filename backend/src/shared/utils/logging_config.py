@@ -15,6 +15,15 @@ import json
 from datetime import datetime
 
 
+class DateTimeEncoder(json.JSONEncoder):
+    """Custom JSON encoder that handles datetime objects."""
+    
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super().default(obj)
+
+
 class StructuredFormatter(logging.Formatter):
     """
     Custom formatter that provides structured logging output
@@ -56,8 +65,8 @@ class StructuredFormatter(logging.Formatter):
                 f"{' | Exception: ' + log_data['exception'] if 'exception' in log_data else ''}"
             )
         
-        # For file output, use JSON format for structured logging
-        return json.dumps(log_data, ensure_ascii=False)
+        # For file output, use JSON format for structured logging with datetime handling
+        return json.dumps(log_data, ensure_ascii=False, cls=DateTimeEncoder)
 
 
 def setup_logging(

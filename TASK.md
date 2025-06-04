@@ -5,7 +5,7 @@
 
 ## Phase 1: Thiết lập Backend Cốt lõi & Thu thập Dữ liệu Cơ bản
 
-### Task 1.1 (F1.1): Khởi tạo Orchestrator Agent và thiết lập logging cơ bản ✅ COMPLETED
+### Task 1.1 (F1.1): Khởi tạo Orchestrator Agent và thiết lập logging cơ bản ✅ COMPLETED & ENHANCED
 - [x] **Task:** Thiết lập cấu trúc project Python cho Orchestrator Agent.
     - **DoD:**
         - ✅ Cấu trúc thư mục cơ bản cho Orchestrator được tạo.
@@ -15,17 +15,73 @@
 - [x] **Task:** Định nghĩa cấu trúc `TaskDefinition` ban đầu.
     - **DoD:**
         - ✅ Một Pydantic model hoặc data class `TaskDefinition` được tạo, ban đầu chỉ chứa trường `repository_url: str`.
+- [x] **Enhanced Requirements (Added 6/6/2025):**
+    - ✅ **Docker Compose Setup:** Complete containerized development environment with Neo4j and backend services
+    - ✅ **Enhanced Logging:** Extensive structured logging with JSON format, file rotation, performance metrics, and debugging capabilities
 
-**Ngày hoàn thành:** 4/6/2025
+**Ngày hoàn thành:** 4/6/2025 (Original) | 6/6/2025 (Enhanced)  
 **Các file đã tạo:**
-- `backend/src/orchestrator/orchestrator_agent.py` - OrchestratorAgent class với logging cơ bản
+- `backend/src/orchestrator/orchestrator_agent.py` - Enhanced OrchestratorAgent class với extensive logging
 - `backend/src/shared/models/task_definition.py` - TaskDefinition Pydantic model 
-- `backend/src/shared/utils/logging_config.py` - Cấu hình logging tập trung
-- `backend/requirements.txt` - Dependencies cho dự án
-- `backend/test_orchestrator.py` - Script test đơn giản
+- `backend/src/shared/utils/logging_config.py` - Advanced structured logging configuration
+- `backend/requirements.txt` - Dependencies cho dự án (fixed ast module issue)
+- `backend/main.py` - Production-ready FastAPI application với health checks
+- `backend/Dockerfile` - Multi-stage Docker build cho development/production
+- `backend/.dockerignore` - Optimized Docker build context
+- `docker-compose.yml` - Complete environment với Neo4j, backend, networking
+- `scripts/setup-dev.sh` - Automated development environment setup
+- `docs/DOCKER_DEVELOPMENT.md` - Comprehensive Docker development guide
+- `env.example` - Environment template với OpenAI và Neo4j config
 - `backend/tests/test_task_definition.py` - Unit tests cho TaskDefinition
-- `backend/tests/test_orchestrator_agent.py` - Unit tests cho OrchestratorAgent
+- `backend/tests/test_orchestrator_agent.py` - Enhanced unit tests cho OrchestratorAgent  
 **Kết quả test:** Tất cả 18 unit tests PASS ✅
+**Docker Status:** All containers healthy (Neo4j + Backend) ✅
+**APIs Working:** Health check, task creation, status retrieval, stats ✅  
+**Enhanced Features:**
+- Structured JSON logging với datetime handling
+- Performance metrics tracking  
+- Function entry/exit logging
+- Log rotation và multiple log files (general + debug)
+- Docker-first development workflow
+- One-command environment setup
+- Debugging support với port 5678
+- Health checks cho all services
+
+**Manual Test Scenarios:**
+1. **Docker Environment Setup:**
+   ```bash
+   ./scripts/setup-dev.sh  # Should setup complete environment
+   docker compose ps       # Should show all containers healthy
+   ```
+
+2. **API Testing:**
+   ```bash
+   curl http://localhost:8000/health  # Should return healthy status
+   curl http://localhost:8000/        # Should return service info
+   curl http://localhost:8000/stats   # Should return agent statistics
+   
+   # Create task
+   curl -X POST http://localhost:8000/tasks \
+     -H "Content-Type: application/json" \
+     -d '{"repository_url": "https://github.com/user/test"}'
+   
+   # Get task status (use execution_id from above)
+   curl http://localhost:8000/tasks/{execution_id}
+   ```
+
+3. **Logging Verification:**
+   ```bash
+   ls logs/                                    # Should show log files
+   tail -5 logs/repochat_20250604.log         # Should show JSON structured logs
+   tail -10 logs/repochat_debug_20250604.log  # Should show debug logs
+   ```
+
+4. **Development Workflow:**
+   ```bash
+   docker compose exec backend bash           # Should access backend container
+   docker compose logs backend               # Should show application logs
+   # Debug port 5678 should be available for IDE attachment
+   ```
 
 ### Task 1.2 (F1.2): `TEAM Data Acquisition` (`GitOperationsModule`): Thực hiện clone nông Git repository công khai
 - [ ] **Task:** Viết module Python `GitOperationsModule` có chức năng clone repository.

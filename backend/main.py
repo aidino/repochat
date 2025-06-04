@@ -8,6 +8,7 @@ and health monitoring for Docker development environment.
 import os
 import sys
 import time
+import json
 from datetime import datetime
 from contextlib import asynccontextmanager
 from typing import Dict, Any
@@ -15,6 +16,7 @@ from typing import Dict, Any
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
 import uvicorn
 
 # Add src to Python path
@@ -28,6 +30,22 @@ from src.shared.utils.logging_config import (
 )
 from src.shared.models.task_definition import TaskDefinition
 from src.orchestrator.orchestrator_agent import OrchestratorAgent
+
+
+# Custom JSON encoder for datetime objects
+def custom_jsonable_encoder(obj):
+    """Custom encoder that handles datetime objects recursively."""
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    elif isinstance(obj, dict):
+        return {key: custom_jsonable_encoder(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [custom_jsonable_encoder(item) for item in obj]
+    elif hasattr(obj, '__dict__'):
+        # Handle custom objects by converting to dict first
+        return custom_jsonable_encoder(obj.__dict__)
+    else:
+        return obj
 
 
 # Global variables for application state
@@ -183,7 +201,7 @@ async def health_check():
             orchestrator_info = orchestrator.get_agent_stats()
             orchestrator_healthy = orchestrator_info.get('is_initialized', False)
         
-        # System health info
+        # System health info with proper datetime serialization
         health_data = {
             "status": "healthy" if orchestrator_healthy else "degraded",
             "timestamp": datetime.now().isoformat(),
@@ -191,7 +209,7 @@ async def health_check():
             "checks": {
                 "orchestrator": {
                     "status": "healthy" if orchestrator_healthy else "unhealthy",
-                    "details": orchestrator_info
+                    "details": custom_jsonable_encoder(orchestrator_info)
                 },
                 "environment": {
                     "log_level": os.getenv("LOG_LEVEL", "DEBUG"),

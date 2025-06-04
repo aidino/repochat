@@ -340,6 +340,40 @@ class OrchestratorAgent:
         
         return task_info
     
+    def get_agent_stats(self) -> dict:
+        """
+        Get comprehensive statistics about the orchestrator agent.
+        
+        Returns:
+            Dictionary containing agent statistics and status
+        """
+        start_time = time.time()
+        log_function_entry(self.logger, "get_agent_stats")
+        
+        stats = {
+            'agent_id': self.agent_id,
+            'is_initialized': self._is_initialized,
+            'created_at': self._initialization_time.isoformat() if self._initialization_time else None,
+            'uptime_seconds': (datetime.now() - self._initialization_time).total_seconds() if self._initialization_time else 0,
+            'active_tasks_count': len(self._active_tasks),
+            'statistics': dict(self._stats),
+            'active_tasks': {
+                task_id: {
+                    'status': task_info['status'],
+                    'created_at': task_info['created_at'].isoformat(),
+                    'repository_url': task_info['definition'].repository_url,
+                    'steps_completed': len(task_info['steps_completed']),
+                    'errors_count': len(task_info['errors'])
+                }
+                for task_id, task_info in self._active_tasks.items()
+            }
+        }
+        
+        execution_time = time.time() - start_time
+        log_function_exit(self.logger, "get_agent_stats", result="success", execution_time=execution_time)
+        
+        return stats
+    
     def shutdown(self) -> None:
         """Gracefully shutdown the orchestrator agent."""
         self.logger.info(f"Shutting down Orchestrator Agent {self.agent_id}")
