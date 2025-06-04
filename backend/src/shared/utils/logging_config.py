@@ -24,6 +24,13 @@ class DateTimeEncoder(json.JSONEncoder):
         return super().default(obj)
 
 
+class InfoAndAboveFilter(logging.Filter):
+    """Filter that only allows INFO level and above (excludes DEBUG)."""
+    
+    def filter(self, record):
+        return record.levelno >= logging.INFO
+
+
 class StructuredFormatter(logging.Formatter):
     """
     Custom formatter that provides structured logging output
@@ -72,7 +79,7 @@ class StructuredFormatter(logging.Formatter):
 def setup_logging(
     level: str = "DEBUG",
     console_level: str = "INFO",
-    file_level: str = "DEBUG",
+    file_level: str = "INFO",
     log_file: Optional[str] = None,
     logger_name: str = "repochat",
     max_file_size: int = 50 * 1024 * 1024,  # 50MB
@@ -129,6 +136,7 @@ def setup_logging(
         encoding='utf-8'
     )
     file_handler.setLevel(getattr(logging, file_level.upper()))
+    file_handler.addFilter(InfoAndAboveFilter())  # Only allow INFO+ levels
     file_formatter = StructuredFormatter()
     file_formatter.is_console = False
     file_handler.setFormatter(file_formatter)
@@ -282,5 +290,5 @@ def log_performance_metric(logger: logging.Logger, metric_name: str,
 main_logger = setup_logging(
     level=os.getenv("LOG_LEVEL", "DEBUG"),
     console_level=os.getenv("CONSOLE_LOG_LEVEL", "INFO"),
-    file_level=os.getenv("FILE_LOG_LEVEL", "DEBUG")
+    file_level=os.getenv("FILE_LOG_LEVEL", "INFO")
 ) 
