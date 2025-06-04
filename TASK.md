@@ -153,9 +153,9 @@ cat logs/repochat_debug_$(date +%Y%m%d).log | head -20
 ```
 
 #### Expected Output:
-- ✅ **File logs/repochat_YYYYMMDD.log**: Chứa structured logs với levels INFO và WARNING
-- ✅ **File logs/repochat_debug_YYYYMMDD.log**: Chứa verbose logs với levels DEBUG
-- ✅ **Log Structure**: Mỗi dòng log có format: `timestamp [LEVEL] logger_name: message {extra_data}`
+- ✅ **File logs/repochat_YYYYMMDD.log**: Chứa structured logs với levels INFO, WARNING, ERROR (KHÔNG chứa DEBUG)
+- ✅ **File logs/repochat_debug_YYYYMMDD.log**: Chứa verbose logs với tất cả levels bao gồm DEBUG
+- ✅ **Log Structure**: Mỗi dòng log có format JSON với timestamp, level, logger, message, extra_data
 - ✅ **Performance Metrics**: Logs chứa execution_time và performance metrics
 - ✅ **Agent Context**: Logs chứa agent_id và context information
 
@@ -165,6 +165,13 @@ cat logs/repochat_debug_$(date +%Y%m%d).log | head -20
 grep "OrchestratorAgent" logs/repochat_*.log
 grep "execution_time" logs/repochat_*.log
 grep "extra_data" logs/repochat_*.log
+
+# Verify proper log level separation (FIXED)
+echo "Main log DEBUG count (should be 0):"
+grep -c "level.*DEBUG" logs/repochat_$(date +%Y%m%d).log || echo "0 - CORRECT!"
+
+echo "Debug log DEBUG count (should be >0):"
+grep -c "level.*DEBUG" logs/repochat_debug_$(date +%Y%m%d).log
 ```
 
 ---

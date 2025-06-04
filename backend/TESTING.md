@@ -139,6 +139,18 @@ pip install --upgrade -r requirements.txt
 pip --version
 ```
 
+### Issue 5: Logging Level Issues (FIXED)
+**Symptoms**: Both log files contain DEBUG messages instead of proper separation
+**Solution**: 
+```bash
+# This has been fixed in the logging configuration
+# Main log file now only contains INFO/WARNING/ERROR
+# Debug log file contains all levels including DEBUG
+# Verify with:
+grep -c "level.*DEBUG" logs/repochat_$(date +%Y%m%d).log  # Should be 0
+grep -c "level.*DEBUG" logs/repochat_debug_$(date +%Y%m%d).log  # Should be >0
+```
+
 ## 📈 Performance Benchmarks
 
 ### Expected Performance Metrics
