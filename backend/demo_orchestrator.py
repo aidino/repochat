@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """
-Test Script for Orchestrator Agent - Task 1.1
+Demo Script for Orchestrator Agent - Task 1.1
 
 This script demonstrates the basic functionality of the Orchestrator Agent
 and shows the logging output as required by the Task 1.1 DoD.
+
+This is an integration demo, not a unit test. Unit tests are located in the tests/ directory.
 """
 
 import sys

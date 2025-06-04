@@ -23,7 +23,7 @@ backend/
 │       └── utils/              # Utilities
 ├── tests/                      # Unit tests
 ├── requirements.txt            # Dependencies
-└── test_orchestrator.py       # Demo script
+└── demo_orchestrator.py       # Integration demo script
 ```
 
 ## Cài đặt
@@ -42,7 +42,7 @@ pip install -r requirements.txt
 
 2. Chạy demo script:
 ```bash
-python test_orchestrator.py
+python demo_orchestrator.py
 ```
 
 ## Chạy Tests
