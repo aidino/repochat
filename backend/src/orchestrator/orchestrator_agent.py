@@ -19,7 +19,7 @@ from shared.utils.logging_config import (
     log_performance_metric
 )
 from shared.models.task_definition import TaskDefinition
-from teams.data_acquisition import GitOperationsModule
+from teams.data_acquisition import GitOperationsModule, LanguageIdentifierModule
 
 
 class OrchestratorAgent:
@@ -105,7 +105,8 @@ class OrchestratorAgent:
             # Initialize TEAM Data Acquisition components
             self.logger.debug("Initializing TEAM Data Acquisition...")
             self.git_operations = GitOperationsModule()
-            self.logger.info("GitOperationsModule initialized successfully")
+            self.language_identifier = LanguageIdentifierModule()
+            self.logger.info("GitOperationsModule and LanguageIdentifierModule initialized successfully")
             
             # Future phases will add:
             # - LangGraph workflow engine setup
@@ -124,7 +125,8 @@ class OrchestratorAgent:
                     'agent_id': self.agent_id,
                     'status': 'initialized',
                     'components_initialized': [
-                        'GitOperationsModule'
+                        'GitOperationsModule',
+                        'LanguageIdentifierModule'
                     ]
                 }
             })
@@ -303,11 +305,56 @@ class OrchestratorAgent:
                 # Continue processing - don't fail the entire task yet
                 self._active_tasks[execution_id]['repository_path'] = None
             
+            # TEAM Data Acquisition - Language Identification (Task 1.3 Integration)
+            detected_languages = []
+            if self._active_tasks[execution_id].get('repository_path'):
+                self.logger.info(f"Starting language identification")
+                lang_start_time = time.time()
+                
+                try:
+                    detected_languages = self.language_identifier.identify_languages(
+                        repository_path=self._active_tasks[execution_id]['repository_path']
+                    )
+                    
+                    lang_duration = time.time() - lang_start_time
+                    
+                    self._active_tasks[execution_id]['steps_completed'].append({
+                        'step': 'languages_identified',
+                        'timestamp': datetime.now(),
+                        'duration_ms': lang_duration * 1000,
+                        'detected_languages': detected_languages
+                    })
+                    
+                    self.logger.info(f"Languages identified successfully", extra={
+                        'extra_data': {
+                            'execution_id': execution_id,
+                            'detected_languages': detected_languages,
+                            'identification_duration_ms': lang_duration * 1000
+                        }
+                    })
+                    
+                    # Store detected languages in task info
+                    self._active_tasks[execution_id]['detected_languages'] = detected_languages
+                    
+                except Exception as lang_error:
+                    self.logger.error(f"Failed to identify languages: {lang_error}", exc_info=True)
+                    self._active_tasks[execution_id]['errors'].append({
+                        'error': f"Language identification failed: {lang_error}",
+                        'timestamp': datetime.now(),
+                        'error_type': 'language_identification_error'
+                    })
+                    # Continue processing - don't fail the entire task
+                    self._active_tasks[execution_id]['detected_languages'] = []
+            else:
+                self.logger.warning("Skipping language identification - no repository path available")
+                self._active_tasks[execution_id]['detected_languages'] = []
+            
             # Future workflow steps with detailed logging:
             self.logger.debug("Future workflow steps:", extra={
                 'extra_data': {
                     'completed_steps': [
-                        "TEAM Data Acquisition -> clone repo (IMPLEMENTED)"
+                        "TEAM Data Acquisition -> clone repo (IMPLEMENTED)",
+                        "TEAM Data Acquisition -> identify languages (IMPLEMENTED)"
                     ],
                     'planned_steps': [
                         "TEAM Data Acquisition -> identify language",
@@ -315,7 +362,7 @@ class OrchestratorAgent:
                         "TEAM Code Analysis -> analyze code structure", 
                         "TEAM Synthesis & Reporting -> generate reports"
                     ],
-                    'current_phase': "Task 1.2 - GitOperationsModule integrated"
+                    'current_phase': "Task 1.3 - LanguageIdentifierModule integrated"
                 }
             })
             
