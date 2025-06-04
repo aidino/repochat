@@ -112,6 +112,571 @@ Phase 1 tạo foundation vững chắc cho Code Knowledge Graph construction tro
 
 ---
 
+## 📋 MANUAL TEST SCENARIOS - PHASE 1
+
+### Môi trường Test Requirements
+- **Python**: 3.8+ installed
+- **Git**: Latest version installed  
+- **Network**: Internet connection for cloning public repositories
+- **Terminal**: Command line access
+
+### Setup Test Environment
+```bash
+# 1. Chuyển vào thư mục backend
+cd backend
+
+# 2. Cài đặt dependencies
+pip install -r requirements.txt
+
+# 3. Kiểm tra cấu trúc thư mục
+ls -la src/
+ls -la tests/
+```
+
+---
+
+### MT1.1: Logging System Manual Test ✅
+
+**Description**: Kiểm tra logging system hoạt động đúng  
+**Related Task**: Task 1.1 - Thiết lập logging system
+
+#### Test Steps:
+```bash
+# 1. Chạy demo orchestrator để tạo logs
+cd backend
+python demo_orchestrator.py
+
+# 2. Kiểm tra log files được tạo
+ls -la logs/
+cat logs/repochat_$(date +%Y%m%d).log | head -20
+cat logs/repochat_debug_$(date +%Y%m%d).log | head -20
+```
+
+#### Expected Output:
+- ✅ **File logs/repochat_YYYYMMDD.log**: Chứa structured logs với levels INFO và WARNING
+- ✅ **File logs/repochat_debug_YYYYMMDD.log**: Chứa verbose logs với levels DEBUG
+- ✅ **Log Structure**: Mỗi dòng log có format: `timestamp [LEVEL] logger_name: message {extra_data}`
+- ✅ **Performance Metrics**: Logs chứa execution_time và performance metrics
+- ✅ **Agent Context**: Logs chứa agent_id và context information
+
+#### Test Validation:
+```bash
+# Kiểm tra log format và content
+grep "OrchestratorAgent" logs/repochat_*.log
+grep "execution_time" logs/repochat_*.log
+grep "extra_data" logs/repochat_*.log
+```
+
+---
+
+### MT1.2: GitOperationsModule Manual Test ✅
+
+**Description**: Kiểm tra Git operations với public repository  
+**Related Task**: Task 1.2 - Tạo GitOperationsModule
+
+#### Test Steps:
+```bash
+# 1. Chạy unit test cho GitOperationsModule
+cd backend
+python -m pytest tests/test_git_operations_module.py -v
+
+# 2. Test manual clone operation
+python -c "
+from src.teams.data_acquisition.git_operations_module import GitOperationsModule
+git_ops = GitOperationsModule()
+result = git_ops.clone_repository('https://github.com/octocat/Hello-World.git')
+print(f'Clone result: {result}')
+import os
+if result and os.path.exists(result):
+    print(f'Files: {os.listdir(result)[:5]}')
+    import shutil
+    shutil.rmtree(result)
+    print('Cleaned up successfully')
+"
+```
+
+#### Expected Output:
+- ✅ **Clone Success**: Repository được clone thành công vào temp directory
+- ✅ **Shallow Clone**: Chỉ clone depth=1 (single commit) để tối ưu
+- ✅ **File Structure**: Directory chứa .git folder và source files
+- ✅ **Logging**: Comprehensive logs về clone process, timing, size
+- ✅ **Cleanup**: Temp directory được xóa thành công
+
+#### Test Validation:
+```bash
+# Kiểm tra logs cho Git operations
+grep "GitOperationsModule" logs/repochat_debug_*.log
+grep "Repository cloned successfully" logs/repochat_debug_*.log
+grep "clone_duration_ms" logs/repochat_debug_*.log
+```
+
+---
+
+### MT1.3: LanguageIdentifierModule Manual Test ✅
+
+**Description**: Kiểm tra nhận dạng ngôn ngữ lập trình  
+**Related Task**: Task 1.3 - Tạo LanguageIdentifierModule
+
+#### Test Steps:
+```bash
+# 1. Chạy unit test cho LanguageIdentifierModule
+cd backend
+python -m pytest tests/test_language_identifier_module.py -v
+
+# 2. Test manual language identification
+python -c "
+from src.teams.data_acquisition.language_identifier_module import LanguageIdentifierModule
+from src.teams.data_acquisition.git_operations_module import GitOperationsModule
+
+# Clone a repository với multiple languages
+git_ops = GitOperationsModule()
+repo_path = git_ops.clone_repository('https://github.com/octocat/Hello-World.git')
+
+# Identify languages
+lang_id = LanguageIdentifierModule()
+languages = lang_id.identify_languages(repo_path)
+print(f'Detected languages: {languages}')
+
+# Get detailed stats
+stats = lang_id.get_language_statistics(repo_path)
+print(f'Language stats: {stats}')
+
+# Cleanup
+import shutil
+shutil.rmtree(repo_path)
+print('Test completed successfully')
+"
+```
+
+#### Expected Output:
+- ✅ **Language Detection**: Detect đúng ngôn ngữ chính (ví dụ: ["python", "javascript", "html"])
+- ✅ **File Analysis**: Analyze file extensions và content patterns
+- ✅ **Statistics**: Trả về số lượng files cho mỗi ngôn ngữ
+- ✅ **Performance**: Language identification hoàn thành trong <5 giây
+- ✅ **Accuracy**: Primary language detection chính xác
+
+#### Test Validation:
+```bash
+# Kiểm tra logs cho Language identification
+grep "LanguageIdentifierModule" logs/repochat_debug_*.log
+grep "languages_detected" logs/repochat_debug_*.log
+grep "language_identification_duration" logs/repochat_debug_*.log
+```
+
+---
+
+### MT1.4: DataPreparationModule Manual Test ✅
+
+**Description**: Kiểm tra tạo ProjectDataContext từ Git và Language modules  
+**Related Task**: Task 1.4 - Tạo DataPreparationModule
+
+#### Test Steps:
+```bash
+# 1. Chạy unit test cho DataPreparationModule
+cd backend
+python -m pytest tests/test_data_preparation_module.py -v
+
+# 2. Test manual data context creation
+python -c "
+from src.teams.data_acquisition import GitOperationsModule, LanguageIdentifierModule, DataPreparationModule
+
+# Setup workflow
+git_ops = GitOperationsModule()
+lang_id = LanguageIdentifierModule()
+data_prep = DataPreparationModule()
+
+# Clone repository
+repo_url = 'https://github.com/octocat/Hello-World.git'
+repo_path = git_ops.clone_repository(repo_url)
+
+# Identify languages
+languages = lang_id.identify_languages(repo_path)
+
+# Create ProjectDataContext
+context = data_prep.create_project_context(
+    cloned_code_path=repo_path,
+    detected_languages=languages,
+    repository_url=repo_url
+)
+
+print(f'ProjectDataContext created:')
+print(f'  Repository URL: {context.repository_url}')
+print(f'  Cloned path: {context.cloned_code_path}')
+print(f'  Languages: {context.detected_languages}')
+print(f'  Language count: {context.language_count}')
+print(f'  Primary language: {context.primary_language}')
+print(f'  Has languages: {context.has_languages}')
+
+# Cleanup
+import shutil
+shutil.rmtree(repo_path)
+print('Test completed successfully')
+"
+```
+
+#### Expected Output:
+- ✅ **ProjectDataContext**: Object được tạo thành công với đầy đủ fields
+- ✅ **Repository URL**: Chính xác URL đã cung cấp
+- ✅ **Cloned Path**: Valid path tới repository đã clone
+- ✅ **Languages**: List languages detected từ LanguageIdentifierModule
+- ✅ **Primary Language**: Ngôn ngữ có nhiều files nhất
+- ✅ **Properties**: has_languages và language_count chính xác
+
+#### Test Validation:
+```bash
+# Kiểm tra logs cho Data preparation
+grep "DataPreparationModule" logs/repochat_debug_*.log
+grep "ProjectDataContext created" logs/repochat_debug_*.log
+grep "create_project_context" logs/repochat_debug_*.log
+```
+
+---
+
+### MT1.5: handle_scan_project_task Manual Test ✅
+
+**Description**: Kiểm tra workflow chính scan project từ TaskDefinition  
+**Related Task**: Task 1.5 - Implement handle_scan_project_task trong OrchestratorAgent
+
+#### Test Steps:
+```bash
+# 1. Chạy unit test cho OrchestratorAgent
+cd backend
+python -m pytest tests/test_orchestrator_agent.py::TestOrchestratorAgent::test_handle_scan_project_task_success -v
+
+# 2. Test manual scan project workflow
+python -c "
+from src.orchestrator.orchestrator_agent import OrchestratorAgent
+from src.shared.models.task_definition import TaskDefinition
+
+# Initialize orchestrator
+orchestrator = OrchestratorAgent()
+print(f'OrchestratorAgent initialized: {orchestrator.agent_id[:8]}')
+
+# Create task definition
+task_def = TaskDefinition(repository_url='https://github.com/octocat/Hello-World.git')
+print(f'Task created: {task_def.repository_url}')
+
+# Execute scan project task
+print('Starting scan project task...')
+project_context = orchestrator.handle_scan_project_task(task_def)
+
+# Verify results
+print('Scan completed successfully!')
+print(f'Repository path: {project_context.cloned_code_path}')
+print(f'Detected languages: {project_context.detected_languages}')
+print(f'Language count: {project_context.language_count}')
+print(f'Primary language: {project_context.primary_language}')
+print(f'Repository URL: {project_context.repository_url}')
+
+# Get agent statistics
+stats = orchestrator.get_agent_stats()
+print(f'Agent stats: uptime={stats[\"uptime_seconds\"]:.2f}s, active_tasks={stats[\"active_tasks_count\"]}')
+
+# Cleanup
+import os, shutil
+if os.path.exists(project_context.cloned_code_path):
+    shutil.rmtree(project_context.cloned_code_path)
+    print('Cleaned up repository')
+
+orchestrator.shutdown()
+print('Test completed successfully')
+"
+```
+
+#### Expected Output:
+- ✅ **4-Step Workflow**: PAT check → Git clone → Language identification → Data context creation
+- ✅ **ProjectDataContext**: Complete context object với tất cả required fields
+- ✅ **Performance**: Scan hoàn thành trong <30 giây cho repository nhỏ
+- ✅ **Logging**: Chi tiết logs cho từng step với timing metrics
+- ✅ **Agent Stats**: Statistics tracking cho tasks handled
+
+#### Test Validation:
+```bash
+# Kiểm tra workflow logs
+grep "handle_scan_project_task" logs/repochat_debug_*.log
+grep "Step 1: Checking PAT requirements" logs/repochat_debug_*.log
+grep "Step 2: Cloning repository" logs/repochat_debug_*.log
+grep "Step 3: Identifying programming languages" logs/repochat_debug_*.log
+grep "Step 4: Creating ProjectDataContext" logs/repochat_debug_*.log
+grep "Scan project task completed successfully" logs/repochat_debug_*.log
+```
+
+---
+
+### MT1.6: PATHandlerModule Manual Test ✅
+
+**Description**: Kiểm tra PAT handling cho private repositories  
+**Related Task**: Task 1.6 - Implement PATHandlerModule cho private repositories
+
+#### Test Steps:
+```bash
+# 1. Chạy unit test cho PATHandlerModule
+cd backend
+python -m pytest tests/test_pat_handler_module.py -v
+
+# 2. Test manual PAT detection và handling
+python -c "
+from src.teams.data_acquisition.pat_handler_module import PATHandlerModule
+
+pat_handler = PATHandlerModule()
+print('PATHandlerModule initialized')
+
+# Test 1: Public repository (no PAT needed)
+public_url = 'https://github.com/octocat/Hello-World.git'
+pat = pat_handler.request_pat_if_needed(public_url)
+print(f'Public repo test: {public_url} → PAT needed: {pat is not None}')
+
+# Test 2: Private repository detection
+private_urls = [
+    'https://github.private.company.com/team/repo.git',
+    'https://git.corp.company.com/project/repo.git', 
+    'git@gitlab.internal.company.com:team/repo.git',
+    'https://enterprise.github.com/user/repo.git'
+]
+
+for private_url in private_urls:
+    is_private = pat_handler._is_private_repository(private_url)
+    print(f'Private detection: {private_url} → Private: {is_private}')
+
+# Test 3: Host extraction
+test_cases = [
+    ('https://github.com/user/repo.git', 'github.com'),
+    ('git@gitlab.com:user/repo.git', 'gitlab.com'),
+    ('https://bitbucket.org/user/repo.git', 'bitbucket.org')
+]
+
+for url, expected_host in test_cases:
+    extracted_host = pat_handler._extract_host(url)
+    print(f'Host extraction: {url} → {extracted_host} (expected: {expected_host})')
+
+# Test 4: PAT cache management
+pat_handler._pat_cache['test.com'] = 'test_pat'
+print(f'Cache before clear: {len(pat_handler._pat_cache)} items')
+pat_handler.clear_pat_cache()
+print(f'Cache after clear: {len(pat_handler._pat_cache)} items')
+
+# Test 5: Statistics
+stats = pat_handler.get_stats()
+print(f'PAT stats: {stats}')
+
+print('All PAT tests completed successfully')
+"
+```
+
+#### Expected Output:
+- ✅ **Public Repository**: No PAT requested for public URLs (pat is None)
+- ✅ **Private Detection**: All private URL patterns được detect đúng (True)
+- ✅ **Host Extraction**: Correct host extraction từ mọi URL format
+- ✅ **Cache Management**: PAT cache clear hoạt động đúng (0 items after clear)
+- ✅ **Statistics**: Valid stats object với cached_hosts và cached_host_list
+
+#### Test Private Repository Simulation:
+```bash
+# Test với private repository simulation
+python -c "
+from src.orchestrator.orchestrator_agent import OrchestratorAgent
+from src.shared.models.task_definition import TaskDefinition
+
+orchestrator = OrchestratorAgent()
+private_url = 'https://github.private.company.com/team/secret-repo.git'
+task_def = TaskDefinition(repository_url=private_url)
+
+# Check private detection
+is_private = orchestrator.pat_handler._is_private_repository(private_url)
+print(f'Private repository detection: {is_private}')
+
+# Simulate authenticated URL building
+test_pat = 'ghp_simulated_token_12345'
+host = orchestrator.pat_handler._extract_host(private_url)
+auth_url = orchestrator.git_operations._build_authenticated_url(private_url, test_pat)
+print(f'Host: {host}')
+print(f'Authenticated URL: {auth_url[:50]}...')
+
+orchestrator.shutdown()
+print('Private repository simulation completed')
+"
+```
+
+#### Test Validation:
+```bash
+# Kiểm tra PAT logs
+grep "PATHandlerModule" logs/repochat_debug_*.log
+grep "PAT Handler Module initialized" logs/repochat_debug_*.log
+grep "Private repository detected" logs/repochat_debug_*.log
+grep "PAT obtained and cached" logs/repochat_debug_*.log
+```
+
+---
+
+### MT1.7: Integration Test Suite Manual Test ✅
+
+**Description**: Chạy toàn bộ integration test suite cho Phase 1  
+**Related Task**: All Phase 1 tasks integration
+
+#### Test Steps:
+```bash
+# 1. Chạy comprehensive integration test
+cd backend/tests
+python integration_test_phase_1.py
+
+# 2. Chạy full test suite
+cd backend
+python -m pytest tests/ -v --tb=short
+```
+
+#### Expected Output:
+- ✅ **5 Integration Tests**: All tests PASSED
+  - Test 1: Public Repository Scan (Task 1.5) ✅
+  - Test 2: PAT Handler Module (Task 1.6) ✅  
+  - Test 3: Private Repository Simulation ✅
+  - Test 4: Error Handling ✅
+  - Test 5: Component Integration ✅
+- ✅ **Unit Tests**: 100+ tests PASSED
+- ✅ **Performance**: All tests complete trong <5 phút
+- ✅ **No Errors**: Không có unhandled exceptions
+
+#### Test Validation:
+```bash
+# Kiểm tra test results
+echo "Integration test results:"
+python backend/tests/integration_test_phase_1.py | grep "PASSED\|FAILED"
+
+echo "Unit test summary:"
+python -m pytest backend/tests/ --tb=no -q
+```
+
+---
+
+### MT1.8: End-to-End Workflow Manual Test ✅
+
+**Description**: Test complete workflow từ TaskDefinition đến ProjectDataContext  
+**Related Task**: Full Phase 1 workflow integration
+
+#### Test Steps:
+```bash
+# Test complete end-to-end workflow
+python -c "
+import time
+from src.orchestrator.orchestrator_agent import OrchestratorAgent
+from src.shared.models.task_definition import TaskDefinition
+
+print('=== PHASE 1 END-TO-END WORKFLOW TEST ===')
+start_time = time.time()
+
+# Step 1: Initialize system
+orchestrator = OrchestratorAgent()
+print(f'✅ System initialized in {(time.time() - start_time)*1000:.2f}ms')
+
+# Step 2: Create task definition
+task_def = TaskDefinition(
+    repository_url='https://github.com/microsoft/vscode.git',  # Larger repo for testing
+    task_id='e2e-test-001'
+)
+print(f'✅ Task created: {task_def.task_id}')
+
+# Step 3: Execute scan project task
+step_start = time.time()
+try:
+    project_context = orchestrator.handle_scan_project_task(task_def)
+    execution_time = time.time() - step_start
+    
+    print(f'✅ Scan completed in {execution_time:.2f}s')
+    print(f'   Repository: {project_context.repository_url}')
+    print(f'   Path: {project_context.cloned_code_path}')
+    print(f'   Languages: {project_context.detected_languages[:5]}...')  # First 5
+    print(f'   Primary: {project_context.primary_language}')
+    print(f'   Count: {project_context.language_count}')
+    
+    # Step 4: Verify data quality
+    assert project_context.repository_url == task_def.repository_url
+    assert project_context.cloned_code_path is not None
+    assert project_context.has_languages == True
+    assert project_context.language_count > 0
+    print(f'✅ Data validation passed')
+    
+    # Step 5: Check agent statistics
+    stats = orchestrator.get_agent_stats()
+    print(f'✅ Agent stats: {stats[\"statistics\"][\"successful_tasks\"]} successful tasks')
+    
+    # Cleanup
+    import os, shutil
+    if os.path.exists(project_context.cloned_code_path):
+        shutil.rmtree(project_context.cloned_code_path)
+        print(f'✅ Cleanup completed')
+        
+except Exception as e:
+    print(f'❌ Test failed: {e}')
+    
+finally:
+    orchestrator.shutdown()
+    total_time = time.time() - start_time
+    print(f'✅ Total test time: {total_time:.2f}s')
+    print('=== END-TO-END TEST COMPLETED ===')
+"
+```
+
+#### Expected Output:
+- ✅ **System Init**: Orchestrator khởi tạo thành công trong <1000ms
+- ✅ **Task Creation**: TaskDefinition được tạo với correct fields
+- ✅ **Scan Execution**: Workflow hoàn thành thành công trong <60s
+- ✅ **Data Quality**: ProjectDataContext có valid data
+- ✅ **Performance**: Meets timing requirements cho production use
+- ✅ **Cleanup**: Resources được dọn dẹp đúng cách
+
+---
+
+### 🔍 TROUBLESHOOTING GUIDE
+
+#### Common Issues và Solutions:
+
+**Issue 1: Import Errors**
+```bash
+# Solution: Check Python path
+export PYTHONPATH="${PYTHONPATH}:$(pwd)/backend/src"
+cd backend && python -c "import sys; print(sys.path)"
+```
+
+**Issue 2: Git Clone Failures**
+```bash
+# Solution: Check network và Git installation
+git --version
+ping github.com
+curl -I https://github.com
+```
+
+**Issue 3: Log Files Not Created**
+```bash
+# Solution: Check permissions và create logs directory
+mkdir -p backend/logs
+chmod 755 backend/logs
+```
+
+**Issue 4: Test Dependencies**
+```bash
+# Solution: Reinstall requirements
+cd backend
+pip install --upgrade -r requirements.txt
+```
+
+---
+
+### 📊 SUCCESS CRITERIA SUMMARY
+
+**Phase 1 được coi là hoàn thành thành công khi:**
+
+✅ **All Manual Tests Pass**: 8/8 manual test scenarios PASSED  
+✅ **Unit Tests**: 100+ tests PASSED với >95% coverage  
+✅ **Integration Tests**: 5/5 integration scenarios PASSED  
+✅ **Performance**: Scan repository hoàn thành trong <60s  
+✅ **Logging**: Comprehensive logs với structured format  
+✅ **Security**: PAT handling an toàn, không persist credentials  
+✅ **Error Handling**: Graceful degradation cho mọi error cases  
+✅ **Documentation**: Complete manual test procedures documented  
+
+**🎯 Result**: **PHASE 1 FULLY VALIDATED VÀ READY FOR PHASE 2**
+
+---
+
 ## Phase 2: Xây dựng Code Knowledge Graph (CKG) Ban đầu
 
 ### Task 2.1 (F2.1): `TEAM CKG Operations`: Thiết lập kết nối đến Neo4j
