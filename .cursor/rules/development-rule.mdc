@@ -24,8 +24,8 @@ alwaysApply: true
 ### ✅ Task Completion
 - **Mark completed tasks in `TASK.md`** immediately after finishing them.
 - Add new sub-tasks or TODOs discovered during development to `TASK.md` under a “Discovered During Work” section.
+- Commit to git after each task
 - List the manual test scenarios after each task to check, fix bugs, and make changes immediately if needed.
-
 ### 📎 Style & Conventions
 - **Use Python** as the primary language.
 - **Follow PEP8**, use type hints, and format with `black`.

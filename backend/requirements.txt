@@ -1,0 +1,45 @@
+# RepoChat v1.0 Dependencies
+
+# Core framework và orchestration
+langchain>=0.1.0
+langgraph>=0.1.0
+pydantic>=2.0.0
+
+# LLM và AI services  
+openai>=1.0.0
+
+# Graph database
+neo4j>=5.0.0
+
+# Code parsing
+javalang>=0.13.0  # Java parser
+ast>=3.0.0  # Python AST (built-in)
+
+# Git operations
+gitpython>=3.1.0
+PyGithub>=1.50.0
+
+# Web framework (cho API endpoints)
+fastapi>=0.100.0
+uvicorn>=0.23.0
+
+# Utilities
+python-dotenv>=1.0.0
+pyyaml>=6.0.0
+click>=8.0.0  # CLI framework
+
+# Testing
+pytest>=7.0.0
+pytest-cov>=4.0.0
+
+# Logging và monitoring
+structlog>=23.0.0
+
+# Memory management (Mem0 placeholder)
+# mem0>=1.0.0  # Cần research thư viện phù hợp
+
+# Development tools
+black>=23.0.0
+isort>=5.0.0
+flake8>=6.0.0
+mypy>=1.0.0 
