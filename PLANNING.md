@@ -1,7 +1,5 @@
 # **Kế hoạch Triển khai Dự án RepoChat v1.0**
 
-**Tài liệu Thiết kế Tham chiếu:** repochat\_design\_updated\_v2.md
-
 ## **Tổng quan các Giai đoạn**
 
 Dự án RepoChat v1.0 sẽ được triển khai qua các giai đoạn chính sau:

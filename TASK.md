@@ -1,7 +1,7 @@
 # Danh sách Công việc Chi tiết Dự án RepoChat v1.0
 
-**Tài liệu Kế hoạch Tham chiếu:** `PLANNING.md` (Artifact ID: `repochat_planning_md_v1`)
-**Tài liệu Thiết kế Tham chiếu:** `DESIGN.md` (Artifact ID: `repochat_design_updated_v2`)
+**Tài liệu Kế hoạch Tham chiếu:** `PLANNING.md`
+**Tài liệu Thiết kế Tham chiếu:** `DESIGN.md` 
 
 ## Phase 1: Thiết lập Backend Cốt lõi & Thu thập Dữ liệu Cơ bản
 
