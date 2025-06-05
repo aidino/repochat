@@ -1162,14 +1162,62 @@ class BaseLanguageParser(ABC):
             - Successfully detected 0 circular dependencies (clean codebase)
             - Integration with existing Phase 2 CKG infrastructure
 
-### Task 3.2 (F3.2): `TEAM Code Analysis` (`ArchitecturalAnalyzerModule`): Xác định public elements không sử dụng
-- [ ] **Task:** Viết logic xác định public elements không sử dụng.
+### Task 3.2 (F3.2): `TEAM Code Analysis` (`ArchitecturalAnalyzerModule`): Xác định public elements không sử dụng ✅ COMPLETED
+- [x] **Task:** Viết logic xác định public elements không sử dụng.
     - **DoD:**
-        - Module có hàm nhận quyền truy cập CKG.
-        - Hàm truy vấn CKG để tìm các node `Method`/`Function` được đánh dấu là "public" (cần thêm thuộc tính này vào CKG hoặc suy luận từ parser).
-        - Kiểm tra xem các node này có relationship `CALLS` trỏ đến chúng hay không (từ bên trong codebase đã phân tích).
-        - Hàm trả về danh sách các public elements có khả năng không được sử dụng, kèm cảnh báo rõ ràng về hạn chế của phân tích tĩnh.
-        - Tạo đối tượng `AnalysisFinding` cho mỗi trường hợp.
+        - ✅ Module có hàm nhận quyền truy cập CKG.
+        - ✅ Hàm truy vấn CKG để tìm các node `Method`/`Function` được đánh dấu là "public" (cần thêm thuộc tính này vào CKG hoặc suy luận từ parser).
+        - ✅ Kiểm tra xem các node này có relationship `CALLS` trỏ đến chúng hay không (từ bên trong codebase đã phân tích).
+        - ✅ Hàm trả về danh sách các public elements có khả năng không được sử dụng, kèm cảnh báo rõ ràng về hạn chế của phân tích tĩnh.
+        - ✅ Tạo đối tượng `AnalysisFinding` cho mỗi trường hợp.
+
+**Implementation Details:**
+- ✅ **Core Functionality**: `detect_unused_public_elements()` method trong ArchitecturalAnalyzerModule
+- ✅ **Public Methods Detection**: Comprehensive Cypher queries để find unused public/protected methods
+- ✅ **Public Classes Detection**: Advanced queries để find unused public/protected classes
+- ✅ **Smart Filtering**: Excludes common framework methods (main, toString, getters/setters, test classes)
+- ✅ **Analysis Limitations Warnings**: Clear warnings về static analysis limitations (reflection, DI, external APIs)
+- ✅ **Integration**: Seamless integration với comprehensive architectural analysis workflow
+- ✅ **Data Models**: Uses existing AnalysisFinding và AnalysisFindingType.UNUSED_PUBLIC_ELEMENT
+- ✅ **Severity Classification**: Smart severity based on visibility (public vs protected) và element type
+- ✅ **Recommendations**: Detailed recommendations cho resolving unused elements
+- ✅ **Performance**: Efficient Neo4j queries với proper error handling
+- ✅ **Comprehensive Testing**: 13 unit tests covering all scenarios + edge cases
+- ✅ **Manual Testing**: Comprehensive manual test script for real-world validation
+
+**Technical Achievement:**
+- **Core Methods**: 4 new methods (detect_unused_public_elements, _detect_unused_public_methods, _detect_unused_public_classes, _convert_unused_elements_to_findings)
+- **Code Lines**: 250+ lines of production code
+- **Test Coverage**: 13 comprehensive unit tests (100% passing)
+- **Cypher Queries**: Advanced Neo4j queries với relationship analysis
+- **Error Handling**: Robust error handling với graceful degradation
+- **Performance**: Integration với existing statistics tracking
+
+**Files Modified:**
+- ✅ `backend/src/teams/code_analysis/architectural_analyzer_module.py` (+250 lines)
+- ✅ `backend/tests/test_task_3_1_architectural_analyzer_module.py` (+300 lines new test class)
+- ✅ `backend/manual_test_task_3_2_unused_elements.py` (new comprehensive manual test)
+
+**Manual Test Scenarios:**
+```bash
+# Unit tests (all 13 tests passing)
+python -m pytest tests/test_task_3_1_architectural_analyzer_module.py::TestTask32UnusedPublicElements -v
+
+# Manual testing với real Neo4j data
+python manual_test_task_3_2_unused_elements.py
+
+# Integration test với comprehensive analysis
+analyzer.analyze_project_architecture(project_name)  # Now includes unused elements detection
+```
+
+**Key Features Implemented:**
+1. **Unused Public Methods Detection**: Advanced Cypher queries để find methods không có incoming CALLS relationships
+2. **Unused Public Classes Detection**: Complex queries để find classes không có EXTENDS, IMPLEMENTS, INSTANTIATES, hoặc method calls
+3. **Smart Exclusions**: Filters out framework methods, getters/setters, main methods, test classes
+4. **Analysis Limitations**: Clear warnings về static analysis không thể detect reflection, DI, external API usage
+5. **Severity Assessment**: Public elements = MEDIUM/LOW severity, protected = LOW severity
+6. **Actionable Recommendations**: Specific recommendations based on element type và visibility
+7. **Integration Ready**: Seamlessly integrated vào existing comprehensive analysis workflow
 
 ### Task 3.3 (F3.3): `TEAM LLM Services` (`LLMProviderAbstractionLayer`): Hoàn thiện OpenAI provider
 - [ ] **Task:** Viết `OpenAIProvider` trong `LLMProviderAbstractionLayer`.

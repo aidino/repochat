@@ -419,5 +419,395 @@ class TestAnalysisModels(unittest.TestCase):
         self.assertEqual(len(cycle_findings), 2)
 
 
+class TestTask32UnusedPublicElements(unittest.TestCase):
+    """Test cases for Task 3.2 (F3.2): Unused public elements detection."""
+    
+    def setUp(self):
+        """Set up test fixtures for unused elements testing."""
+        # Mock dependencies
+        self.mock_neo4j_conn = Mock()
+        self.mock_neo4j_conn.is_connected.return_value = True
+        self.mock_neo4j_conn.connect.return_value = True
+        
+        self.mock_ckg_query = Mock(spec=CKGQueryInterfaceModule)
+        self.mock_ckg_query.neo4j = self.mock_neo4j_conn
+        
+        # Create analyzer instance
+        self.analyzer = ArchitecturalAnalyzerModule(ckg_query_interface=self.mock_ckg_query)
+        
+        # Test data
+        self.test_project = "test-unused-elements-project"
+
+    def test_detect_unused_public_elements_success(self):
+        """Test successful detection of unused public elements."""
+        # Mock unused methods and classes (matching expected format)
+        mock_methods = [
+            {
+                'name': 'unusedMethod',
+                'qualified_name': 'com.example.TestClass.unusedMethod',
+                'visibility': 'public',
+                'file_name': 'TestClass.java',
+                'file_path': '/src/main/java/com/example/TestClass.java',
+                'class_name': 'TestClass',
+                'line_number': 25,
+                'element_type': 'method'
+            }
+        ]
+        
+        mock_classes = [
+            {
+                'name': 'UnusedUtil',
+                'qualified_name': 'com.example.UnusedUtil',
+                'visibility': 'public',
+                'file_name': 'UnusedUtil.java',
+                'file_path': '/src/main/java/com/example/UnusedUtil.java',
+                'line_number': 10,
+                'element_type': 'class'
+            }
+        ]
+        
+        with patch.object(self.analyzer, '_detect_unused_public_methods', return_value=mock_methods):
+            with patch.object(self.analyzer, '_detect_unused_public_classes', return_value=mock_classes):
+                result = self.analyzer.detect_unused_public_elements(self.test_project)
+        
+        # Verify results
+        self.assertTrue(result.success)
+        self.assertEqual(len(result.findings), 2)  # 1 method + 1 class
+        self.assertEqual(result.analysis_type, "unused_public_elements_detection")
+        self.assertEqual(len(result.warnings), 1)  # Should have limitations warning
+        
+        # Check method finding
+        method_findings = [f for f in result.findings if 'method' in f.metadata.get('element_type', '')]
+        self.assertEqual(len(method_findings), 1)
+        method_finding = method_findings[0]
+        self.assertEqual(method_finding.finding_type, AnalysisFindingType.UNUSED_PUBLIC_ELEMENT)
+        self.assertEqual(method_finding.title, "Potentially Unused Public Method")
+        self.assertIn("unusedMethod", method_finding.description)
+        self.assertEqual(method_finding.confidence_score, 0.7)
+        
+        # Check class finding
+        class_findings = [f for f in result.findings if 'class' in f.metadata.get('element_type', '')]
+        self.assertEqual(len(class_findings), 1)
+        class_finding = class_findings[0]
+        self.assertEqual(class_finding.finding_type, AnalysisFindingType.UNUSED_PUBLIC_ELEMENT)
+        self.assertEqual(class_finding.title, "Potentially Unused Public Class")
+        self.assertIn("UnusedUtil", class_finding.description)
+
+    def test_detect_unused_public_methods_success(self):
+        """Test unused public methods detection with mocked Neo4j."""
+        mock_session = Mock()
+        mock_result = Mock()
+        
+        # Sample unused method data
+        mock_records = [
+            {
+                'method_name': 'calculateTax',
+                'qualified_name': 'com.shop.TaxCalculator.calculateTax',
+                'visibility': 'public',
+                'file_name': 'TaxCalculator.java',
+                'file_path': '/src/main/java/com/shop/TaxCalculator.java',
+                'class_name': 'TaxCalculator',
+                'line_number': 45
+            },
+            {
+                'method_name': 'formatCurrency',
+                'qualified_name': 'com.shop.Utils.formatCurrency',
+                'visibility': 'protected',
+                'file_name': 'Utils.java',
+                'file_path': '/src/main/java/com/shop/Utils.java',
+                'class_name': 'Utils',
+                'line_number': 12
+            }
+        ]
+        
+        mock_result.__iter__ = Mock(return_value=iter(mock_records))
+        mock_session.run.return_value = mock_result
+        
+        with patch.object(self.mock_neo4j_conn, 'get_session') as mock_get_session:
+            mock_get_session.return_value.__enter__ = Mock(return_value=mock_session)
+            mock_get_session.return_value.__exit__ = Mock(return_value=None)
+            
+            unused_methods = self.analyzer._detect_unused_public_methods(self.test_project)
+            
+            # Verify results
+            self.assertEqual(len(unused_methods), 2)
+            
+            # Check first method
+            self.assertEqual(unused_methods[0]['name'], 'calculateTax')
+            self.assertEqual(unused_methods[0]['visibility'], 'public')
+            self.assertEqual(unused_methods[0]['element_type'], 'method')
+            
+            # Check second method
+            self.assertEqual(unused_methods[1]['name'], 'formatCurrency')
+            self.assertEqual(unused_methods[1]['visibility'], 'protected')
+
+    def test_detect_unused_public_classes_success(self):
+        """Test unused public classes detection with mocked Neo4j."""
+        mock_session = Mock()
+        mock_result = Mock()
+        
+        # Sample unused class data
+        mock_records = [
+            {
+                'class_name': 'LegacyProcessor',
+                'qualified_name': 'com.legacy.LegacyProcessor',
+                'visibility': 'public',
+                'file_name': 'LegacyProcessor.java',
+                'file_path': '/src/main/java/com/legacy/LegacyProcessor.java',
+                'line_number': 8
+            }
+        ]
+        
+        mock_result.__iter__ = Mock(return_value=iter(mock_records))
+        mock_session.run.return_value = mock_result
+        
+        with patch.object(self.mock_neo4j_conn, 'get_session') as mock_get_session:
+            mock_get_session.return_value.__enter__ = Mock(return_value=mock_session)
+            mock_get_session.return_value.__exit__ = Mock(return_value=None)
+            
+            unused_classes = self.analyzer._detect_unused_public_classes(self.test_project)
+            
+            # Verify results
+            self.assertEqual(len(unused_classes), 1)
+            self.assertEqual(unused_classes[0]['name'], 'LegacyProcessor')
+            self.assertEqual(unused_classes[0]['visibility'], 'public')
+            self.assertEqual(unused_classes[0]['element_type'], 'class')
+
+    def test_convert_unused_elements_to_findings_methods(self):
+        """Test conversion of unused methods to findings."""
+        unused_methods = [
+            {
+                'name': 'testMethod',
+                'qualified_name': 'com.test.TestClass.testMethod',
+                'visibility': 'public',
+                'file_name': 'TestClass.java',
+                'file_path': '/src/test/TestClass.java',
+                'class_name': 'TestClass',
+                'line_number': 20,
+                'element_type': 'method'
+            }
+        ]
+        
+        findings = self.analyzer._convert_unused_elements_to_findings(
+            unused_methods, "method", self.test_project
+        )
+        
+        self.assertEqual(len(findings), 1)
+        finding = findings[0]
+        
+        self.assertEqual(finding.finding_type, AnalysisFindingType.UNUSED_PUBLIC_ELEMENT)
+        self.assertEqual(finding.title, "Potentially Unused Public Method")
+        self.assertIn("testMethod", finding.description)
+        self.assertIn("TestClass", finding.description)
+        self.assertEqual(finding.severity, AnalysisSeverity.LOW)  # Methods are LOW severity
+        self.assertEqual(finding.file_path, '/src/test/TestClass.java')
+        self.assertEqual(finding.start_line, 20)
+        self.assertIn('com.test.TestClass.testMethod', finding.affected_entities)
+        self.assertEqual(finding.confidence_score, 0.7)
+        
+        # Check metadata
+        self.assertEqual(finding.metadata['element_type'], 'method')
+        self.assertEqual(finding.metadata['visibility'], 'public')
+        self.assertEqual(finding.metadata['class_name'], 'TestClass')
+        self.assertIn('analysis_limitations', finding.metadata)
+
+    def test_convert_unused_elements_to_findings_classes(self):
+        """Test conversion of unused classes to findings."""
+        unused_classes = [
+            {
+                'name': 'TestUtil',
+                'qualified_name': 'com.util.TestUtil',
+                'visibility': 'public',
+                'file_name': 'TestUtil.java',
+                'file_path': '/src/util/TestUtil.java',
+                'class_name': None,  # Classes don't have parent class in this context
+                'line_number': 5,
+                'element_type': 'class'
+            }
+        ]
+        
+        findings = self.analyzer._convert_unused_elements_to_findings(
+            unused_classes, "class", self.test_project
+        )
+        
+        self.assertEqual(len(findings), 1)
+        finding = findings[0]
+        
+        self.assertEqual(finding.finding_type, AnalysisFindingType.UNUSED_PUBLIC_ELEMENT)
+        self.assertEqual(finding.title, "Potentially Unused Public Class")
+        self.assertIn("TestUtil", finding.description)
+        self.assertEqual(finding.severity, AnalysisSeverity.MEDIUM)  # Classes are MEDIUM severity
+        self.assertEqual(finding.file_path, '/src/util/TestUtil.java')
+        self.assertEqual(finding.start_line, 5)
+
+    def test_generate_unused_element_recommendations_method(self):
+        """Test recommendation generation for unused methods."""
+        method_element = {
+            'name': 'processData',
+            'element_type': 'method'
+        }
+        
+        recommendations = self.analyzer._generate_unused_element_recommendations(
+            method_element, "method"
+        )
+        
+        self.assertGreater(len(recommendations), 4)
+        
+        # Check for key recommendations
+        recommendation_text = " ".join(recommendations)
+        self.assertIn("reflection", recommendation_text)
+        self.assertIn("dependency injection", recommendation_text)
+        self.assertIn("interface", recommendation_text)
+        self.assertIn("inheritance", recommendation_text)
+        self.assertIn("private or removing", recommendation_text)
+
+    def test_generate_unused_element_recommendations_class(self):
+        """Test recommendation generation for unused classes."""
+        class_element = {
+            'name': 'DataProcessor',
+            'element_type': 'class'
+        }
+        
+        recommendations = self.analyzer._generate_unused_element_recommendations(
+            class_element, "class"
+        )
+        
+        self.assertGreater(len(recommendations), 4)
+        
+        # Check for key recommendations
+        recommendation_text = " ".join(recommendations)
+        self.assertIn("configuration", recommendation_text)
+        self.assertIn("annotations", recommendation_text)
+        self.assertIn("type parameter", recommendation_text)
+        self.assertIn("removing it", recommendation_text)
+
+    def test_neo4j_connection_failure_unused_elements(self):
+        """Test handling of Neo4j connection failure during unused elements detection."""
+        self.mock_neo4j_conn.is_connected.return_value = False
+        self.mock_neo4j_conn.connect.return_value = False
+        
+        result = self.analyzer.detect_unused_public_elements(self.test_project)
+        
+        self.assertFalse(result.success)
+        self.assertEqual(len(result.findings), 0)
+        self.assertGreater(len(result.errors), 0)
+        self.assertIn("Cannot connect to Neo4j", result.errors[0])
+
+    def test_cypher_query_exception_unused_elements(self):
+        """Test handling of Cypher query exceptions during unused elements detection."""
+        # Mock the actual detection methods to raise exceptions
+        with patch.object(self.analyzer, '_detect_unused_public_methods', side_effect=Exception("Cypher query failed")):
+            with patch.object(self.analyzer, '_detect_unused_public_classes', return_value=[]):
+                result = self.analyzer.detect_unused_public_elements(self.test_project)
+                
+                self.assertFalse(result.success)
+                self.assertGreater(len(result.errors), 0)
+                self.assertIn("Failed to detect unused public elements", result.errors[0])
+
+    def test_analyze_project_architecture_includes_unused_elements(self):
+        """Test that comprehensive analysis includes unused elements detection."""
+        # Mock both circular dependencies and unused elements results
+        with patch.object(self.analyzer, 'detect_circular_dependencies') as mock_circular:
+            with patch.object(self.analyzer, 'detect_unused_public_elements') as mock_unused:
+                
+                # Setup mock results
+                circular_result = AnalysisResult(
+                    analysis_type="circular_dependency_detection",
+                    project_name=self.test_project,
+                    findings=[],
+                    success=True,
+                    warnings=["Circular warning"]
+                )
+                
+                unused_result = AnalysisResult(
+                    analysis_type="unused_public_elements_detection", 
+                    project_name=self.test_project,
+                    findings=[
+                        AnalysisFinding(
+                            finding_type=AnalysisFindingType.UNUSED_PUBLIC_ELEMENT,
+                            title="Test Unused Method",
+                            description="Test method is unused",
+                            severity=AnalysisSeverity.LOW,
+                            analysis_module="ArchitecturalAnalyzerModule"
+                        )
+                    ],
+                    success=True,
+                    warnings=["Static analysis limitations warning"]
+                )
+                
+                mock_circular.return_value = circular_result
+                mock_unused.return_value = unused_result
+                
+                # Run comprehensive analysis
+                result = self.analyzer.analyze_project_architecture(self.test_project)
+                
+                # Verify both analyses were called
+                mock_circular.assert_called_once_with(self.test_project)
+                mock_unused.assert_called_once_with(self.test_project)
+                
+                # Verify results
+                self.assertTrue(result.success)
+                self.assertEqual(len(result.findings), 1)
+                self.assertEqual(result.findings[0].finding_type, AnalysisFindingType.UNUSED_PUBLIC_ELEMENT)
+                self.assertEqual(len(result.warnings), 2)  # Both warnings included
+
+    def test_statistics_tracking_unused_elements(self):
+        """Test that statistics are properly tracked for unused elements analysis."""
+        initial_stats = self.analyzer.get_analysis_statistics()
+        initial_analyses = initial_stats['analyses_performed']
+        
+        # Mock successful unused elements detection
+        with patch.object(self.analyzer, '_detect_unused_public_methods', return_value=[]):
+            with patch.object(self.analyzer, '_detect_unused_public_classes', return_value=[]):
+                result = self.analyzer.detect_unused_public_elements(self.test_project)
+        
+        self.assertTrue(result.success)
+        
+        # Check updated statistics
+        updated_stats = self.analyzer.get_analysis_statistics()
+        self.assertEqual(updated_stats['analyses_performed'], initial_analyses + 1)
+        self.assertIn('unused_elements_found', updated_stats)
+        self.assertEqual(updated_stats['unused_elements_found'], 0)  # No findings in this test
+
+    def test_edge_case_empty_project(self):
+        """Test unused elements detection on empty project (no classes/methods)."""
+        mock_session = Mock()
+        
+        # Empty results
+        mock_session.run.return_value = iter([])
+        
+        with patch.object(self.mock_neo4j_conn, 'get_session') as mock_get_session:
+            mock_get_session.return_value.__enter__ = Mock(return_value=mock_session)
+            mock_get_session.return_value.__exit__ = Mock(return_value=None)
+            
+            result = self.analyzer.detect_unused_public_elements(self.test_project)
+            
+            self.assertTrue(result.success)
+            self.assertEqual(len(result.findings), 0)
+            self.assertEqual(len(result.warnings), 0)  # No warnings if no findings
+
+    def test_protected_visibility_severity(self):
+        """Test that protected elements get lower severity than public ones."""
+        protected_method = [
+            {
+                'name': 'protectedMethod',
+                'qualified_name': 'com.test.Class.protectedMethod',
+                'visibility': 'protected',
+                'file_name': 'Class.java',
+                'file_path': '/src/Class.java',
+                'class_name': 'Class',
+                'line_number': 10,
+                'element_type': 'method'
+            }
+        ]
+        
+        findings = self.analyzer._convert_unused_elements_to_findings(
+            protected_method, "method", self.test_project
+        )
+        
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].severity, AnalysisSeverity.LOW)  # Protected should be LOW
+
+
 if __name__ == '__main__':
     unittest.main() 

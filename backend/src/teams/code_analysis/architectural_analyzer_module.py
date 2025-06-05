@@ -418,6 +418,297 @@ class ArchitecturalAnalyzerModule:
             'component': 'ArchitecturalAnalyzerModule'
         }
 
+    def detect_unused_public_elements(self, project_name: str) -> AnalysisResult:
+        """
+        Detect public methods and classes that are potentially unused within the analyzed codebase.
+        
+        Note: This analysis has limitations as it only considers static usage within the analyzed
+        codebase and cannot detect usage through reflection, dependency injection, or external APIs.
+        
+        Args:
+            project_name: Name of the project to analyze
+            
+        Returns:
+            AnalysisResult containing potentially unused public elements
+        """
+        start_time = time.time()
+        log_function_entry(self.logger, "detect_unused_public_elements", project_name=project_name)
+        
+        result = AnalysisResult(
+            analysis_type="unused_public_elements_detection",
+            project_name=project_name,
+            findings=[]
+        )
+        
+        try:
+            self.logger.info(f"Starting unused public elements analysis for project: {project_name}")
+            
+            if not self.ckg_query.neo4j.is_connected():
+                if not self.ckg_query.neo4j.connect():
+                    raise Exception("Cannot connect to Neo4j for unused elements detection")
+            
+            # Detect unused public methods
+            unused_methods = self._detect_unused_public_methods(project_name)
+            
+            # Detect unused public classes  
+            unused_classes = self._detect_unused_public_classes(project_name)
+            
+            # Convert to findings
+            method_findings = self._convert_unused_elements_to_findings(
+                unused_methods, "method", project_name
+            )
+            class_findings = self._convert_unused_elements_to_findings(
+                unused_classes, "class", project_name
+            )
+            
+            result.findings.extend(method_findings)
+            result.findings.extend(class_findings)
+            result.success = True
+            
+            # Add analysis limitations warning
+            if result.findings:
+                result.warnings.append(
+                    "Static analysis limitations: Cannot detect usage through reflection, "
+                    "dependency injection, external APIs, or runtime dynamic calls"
+                )
+            
+            self.logger.info(f"Unused public elements analysis completed. "
+                           f"Found {len(method_findings)} unused methods, "
+                           f"{len(class_findings)} unused classes.")
+            
+            # Update statistics
+            self._stats['analyses_performed'] += 1
+            if 'unused_elements_found' not in self._stats:
+                self._stats['unused_elements_found'] = 0
+            self._stats['unused_elements_found'] += len(result.findings)
+            
+        except Exception as e:
+            error_msg = f"Failed to detect unused public elements: {str(e)}"
+            result.errors.append(error_msg)
+            result.success = False
+            self.logger.error(error_msg, exc_info=True)
+        
+        # Record timing
+        result.analysis_duration_ms = (time.time() - start_time) * 1000
+        self._stats['total_analysis_time_ms'] += result.analysis_duration_ms
+        
+        log_function_exit(self.logger, "detect_unused_public_elements", 
+                         findings_count=len(result.findings), success=result.success)
+        return result
+
+    def _detect_unused_public_methods(self, project_name: str) -> List[Dict[str, Any]]:
+        """
+        Detect public methods that are not called anywhere in the codebase.
+        
+        Args:
+            project_name: Project to analyze
+            
+        Returns:
+            List of unused method information
+        """
+        self.logger.debug("Detecting unused public methods")
+        
+        # Query to find public methods that have no incoming CALLS relationships
+        unused_methods_query = """
+        MATCH (m:Method {project_name: $project_name})
+        WHERE m.visibility = 'public' OR m.visibility = 'protected'
+        AND NOT exists((m)<-[:CALLS]-())
+        AND NOT m.name IN ['main', 'toString', 'equals', 'hashCode', 'clone', 'finalize']
+        AND NOT m.name STARTS WITH 'get'
+        AND NOT m.name STARTS WITH 'set' 
+        AND NOT m.name STARTS WITH 'is'
+        OPTIONAL MATCH (m)-[:CONTAINS]->(f:File)
+        OPTIONAL MATCH (m)-[:CONTAINS]->(c:Class)
+        RETURN 
+            m.name as method_name,
+            m.qualified_name as qualified_name,
+            m.visibility as visibility,
+            f.name as file_name,
+            f.path as file_path,
+            c.name as class_name,
+            m.line_number as line_number
+        ORDER BY c.name, m.name
+        """
+        
+        unused_methods = []
+        
+        try:
+            with self.ckg_query.neo4j.get_session() as session:
+                result = session.run(unused_methods_query, project_name=project_name)
+                
+                for record in result:
+                    method_info = {
+                        'name': record['method_name'],
+                        'qualified_name': record['qualified_name'],
+                        'visibility': record['visibility'],
+                        'file_name': record['file_name'],
+                        'file_path': record['file_path'],
+                        'class_name': record['class_name'],
+                        'line_number': record['line_number'],
+                        'element_type': 'method'
+                    }
+                    unused_methods.append(method_info)
+                    
+                    self.logger.debug(f"Found potentially unused method: {method_info['qualified_name']}")
+        
+        except Exception as e:
+            self.logger.error(f"Error detecting unused public methods: {e}")
+            
+        return unused_methods
+
+    def _detect_unused_public_classes(self, project_name: str) -> List[Dict[str, Any]]:
+        """
+        Detect public classes that are not referenced anywhere in the codebase.
+        
+        Args:
+            project_name: Project to analyze
+            
+        Returns:
+            List of unused class information
+        """
+        self.logger.debug("Detecting unused public classes")
+        
+        # Query to find public classes that are not extended, implemented, or instantiated
+        unused_classes_query = """
+        MATCH (c:Class {project_name: $project_name})
+        WHERE c.visibility = 'public' OR c.visibility = 'protected'
+        AND NOT exists((c)<-[:EXTENDS]-())
+        AND NOT exists((c)<-[:IMPLEMENTS]-())
+        AND NOT exists((c)<-[:INSTANTIATES]-())
+        AND NOT exists((:Method)-[:CALLS]->(:Method)-[:CONTAINS]->(c))
+        AND NOT c.name IN ['Main', 'Application', 'App']
+        AND NOT c.name ENDS WITH 'Test'
+        AND NOT c.name ENDS WITH 'Tests'
+        OPTIONAL MATCH (c)-[:CONTAINS]->(f:File)
+        RETURN 
+            c.name as class_name,
+            c.qualified_name as qualified_name,
+            c.visibility as visibility,
+            f.name as file_name,
+            f.path as file_path,
+            c.line_number as line_number
+        ORDER BY c.name
+        """
+        
+        unused_classes = []
+        
+        try:
+            with self.ckg_query.neo4j.get_session() as session:
+                result = session.run(unused_classes_query, project_name=project_name)
+                
+                for record in result:
+                    class_info = {
+                        'name': record['class_name'],
+                        'qualified_name': record['qualified_name'],
+                        'visibility': record['visibility'],
+                        'file_name': record['file_name'],
+                        'file_path': record['file_path'],
+                        'line_number': record['line_number'],
+                        'element_type': 'class'
+                    }
+                    unused_classes.append(class_info)
+                    
+                    self.logger.debug(f"Found potentially unused class: {class_info['qualified_name']}")
+        
+        except Exception as e:
+            self.logger.error(f"Error detecting unused public classes: {e}")
+            
+        return unused_classes
+
+    def _convert_unused_elements_to_findings(self, unused_elements: List[Dict[str, Any]], 
+                                           element_type: str, project_name: str) -> List[AnalysisFinding]:
+        """
+        Convert unused element information to AnalysisFinding objects.
+        
+        Args:
+            unused_elements: List of unused element information
+            element_type: Type of elements ('method' or 'class')
+            project_name: Project name for context
+            
+        Returns:
+            List of AnalysisFinding objects
+        """
+        findings = []
+        
+        for element in unused_elements:
+            # Determine severity based on visibility and element type
+            if element['visibility'] == 'public':
+                severity = AnalysisSeverity.MEDIUM if element_type == 'class' else AnalysisSeverity.LOW
+            else:  # protected
+                severity = AnalysisSeverity.LOW
+            
+            # Generate description
+            description = (f"Public {element_type} '{element['name']}' appears to be unused "
+                         f"within the analyzed codebase.")
+            if element.get('class_name') and element_type == 'method':
+                description += f" (in class '{element['class_name']}')"
+            
+            # Generate recommendations
+            recommendations = self._generate_unused_element_recommendations(element, element_type)
+            
+            finding = AnalysisFinding(
+                finding_type=AnalysisFindingType.UNUSED_PUBLIC_ELEMENT,
+                title=f"Potentially Unused Public {element_type.title()}",
+                description=description,
+                severity=severity,
+                file_path=element['file_path'],
+                start_line=element['line_number'],
+                affected_entities=[element['qualified_name']] if element['qualified_name'] else [element['name']],
+                analysis_module="ArchitecturalAnalyzerModule",
+                confidence_score=0.7,  # Medium confidence due to static analysis limitations
+                recommendations=recommendations,
+                metadata={
+                    'element_type': element_type,
+                    'visibility': element['visibility'],
+                    'class_name': element.get('class_name'),
+                    'project_name': project_name,
+                    'analysis_limitations': [
+                        'Cannot detect reflection usage',
+                        'Cannot detect dependency injection usage',
+                        'Cannot detect external API usage',
+                        'Cannot detect runtime dynamic calls'
+                    ]
+                }
+            )
+            
+            findings.append(finding)
+            
+        return findings
+
+    def _generate_unused_element_recommendations(self, element: Dict[str, Any], 
+                                               element_type: str) -> List[str]:
+        """
+        Generate recommendations for potentially unused elements.
+        
+        Args:
+            element: Element information
+            element_type: Type of element ('method' or 'class')
+            
+        Returns:
+            List of recommendations
+        """
+        recommendations = [
+            f"Verify that this {element_type} is not used through reflection or dependency injection",
+            f"Check if this {element_type} is part of a public API or framework interface"
+        ]
+        
+        if element_type == 'method':
+            recommendations.extend([
+                "Consider if this method is required by an interface or abstract class",
+                "Check if this method is called through inheritance or polymorphism",
+                "If truly unused, consider making it private or removing it"
+            ])
+        elif element_type == 'class':
+            recommendations.extend([
+                "Verify if this class is instantiated through configuration or annotations",
+                "Check if this class is used as a type parameter or generic constraint",
+                "If truly unused, consider removing it to reduce codebase complexity"
+            ])
+        
+        recommendations.append("Review code coverage reports to confirm usage patterns")
+        
+        return recommendations
+
     def analyze_project_architecture(self, project_name: str) -> AnalysisResult:
         """
         Perform comprehensive architectural analysis of a project.
@@ -443,8 +734,18 @@ class ArchitecturalAnalyzerModule:
             
             if circular_deps_result.success:
                 result.findings.extend(circular_deps_result.findings)
+                result.warnings.extend(circular_deps_result.warnings)
             else:
                 result.errors.extend(circular_deps_result.errors)
+            
+            # Run unused public elements detection (Task 3.2 - F3.2)
+            unused_elements_result = self.detect_unused_public_elements(project_name)
+            
+            if unused_elements_result.success:
+                result.findings.extend(unused_elements_result.findings)
+                result.warnings.extend(unused_elements_result.warnings)
+            else:
+                result.errors.extend(unused_elements_result.errors)
             
             # Future: Add other architectural analyses here
             # - Dependency inversion violations
