@@ -1,0 +1,120 @@
+{
+  "test_summary": {
+    "total_tests": 2,
+    "successful_tests": 2,
+    "failed_tests": 0,
+    "success_rate": 1.0
+  },
+  "performance_statistics": {
+    "total_time": {
+      "min": 3.521585464477539,
+      "max": 127.37893390655518,
+      "avg": 65.45025968551636,
+      "sum": 130.90051937103271
+    },
+    "clone_time": {
+      "min": 2.5088579654693604,
+      "max": 8.604544162750244,
+      "avg": 5.556701064109802
+    },
+    "parsing_time": {
+      "min": 0.10596179962158203,
+      "max": 26.384379386901855,
+      "avg": 13.245170593261719
+    },
+    "ckg_build_time": {
+      "min": 0.8948261737823486,
+      "max": 91.96493005752563,
+      "avg": 46.42987811565399
+    }
+  },
+  "language_breakdown": {
+    "java": {
+      "total": 2,
+      "success": 2,
+      "failed": 0
+    }
+  },
+  "detailed_results": [
+    {
+      "project_name": "Spring PetClinic",
+      "language": "java",
+      "success": true,
+      "error_message": "",
+      "metrics": {
+        "clone_time": 2.5088579654693604,
+        "language_detect_time": 0.00540471076965332,
+        "parsing_time": 0.10596179962158203,
+        "ckg_build_time": 0.8948261737823486,
+        "total_time": 3.521585464477539,
+        "files_parsed": 42,
+        "entities_found": 256,
+        "relationships_created": 26,
+        "nodes_created": 298
+      },
+      "details": {
+        "cloned_path": "/tmp/repochat_spring-petclinic_1749111201731905_3266",
+        "detected_languages": [
+          "java",
+          "html"
+        ],
+        "primary_language": "java",
+        "parse_result_summary": {
+          "languages_processed": [
+            "java"
+          ],
+          "total_files": 42,
+          "total_entities": 256
+        },
+        "ckg_summary": {
+          "project_name": "spring-petclinic-test",
+          "nodes_in_db": 299,
+          "relationships_in_db": 282,
+          "build_success": true
+        }
+      }
+    },
+    {
+      "project_name": "Spring Boot Sample",
+      "language": "java",
+      "success": true,
+      "error_message": "",
+      "metrics": {
+        "clone_time": 8.604544162750244,
+        "language_detect_time": 0.41384315490722656,
+        "parsing_time": 26.384379386901855,
+        "ckg_build_time": 91.96493005752563,
+        "total_time": 127.37893390655518,
+        "files_parsed": 8259,
+        "entities_found": 48375,
+        "relationships_created": 13503,
+        "nodes_created": 56634
+      },
+      "details": {
+        "cloned_path": "/tmp/repochat_spring-boot_1749111205255058_8493",
+        "detected_languages": [
+          "java",
+          "kotlin",
+          "javascript"
+        ],
+        "primary_language": "java",
+        "parse_result_summary": {
+          "languages_processed": [
+            "java",
+            "kotlin"
+          ],
+          "total_files": 8259,
+          "total_entities": 48375
+        },
+        "ckg_summary": {
+          "project_name": "spring-boot-sample-test",
+          "nodes_in_db": 56635,
+          "relationships_in_db": 61878,
+          "build_success": true
+        }
+      }
+    }
+  ],
+  "test_timestamp": "2025-06-05T15:15:32.854930",
+  "phase_coverage": "Phase 1 (Data Acquisition) + Phase 2 (CKG Operations)"
+}

@@ -37,7 +37,7 @@ class TestRunner:
         self.start_time = datetime.now()
         self.test_repo_url = "https://github.com/spring-projects/spring-petclinic.git"
         self.neo4j_config = {
-            "uri": "bolt://neo4j:7687",
+            "uri": "bolt://localhost:7687",
             "username": "neo4j", 
             "password": "repochat123"
         }
