@@ -20,8 +20,8 @@ import time
 from contextlib import contextmanager
 from datetime import datetime
 
-from neo4j import GraphDatabase, Driver, Session, exceptions as neo4j_exceptions
-from neo4j.exceptions import ServiceUnavailable, AuthError, ConfigurationError
+from neo4j import GraphDatabase, Driver, Session
+from neo4j.exceptions import ServiceUnavailable, AuthError, ConfigurationError, ClientError, CypherSyntaxError
 
 from shared.utils.logging_config import (
     get_logger, 
@@ -168,41 +168,43 @@ class Neo4jConnectionModule:
             log_function_exit(self.logger, "connect", result="success", execution_time=total_time)
             return True
             
-        except ServiceUnavailable as e:
-            self.logger.error(f"Neo4j service unavailable: {e}", extra={
-                'extra_data': {
-                    'uri': self.uri,
-                    'error_type': 'ServiceUnavailable',
-                    'connection_attempt': self._stats['connection_attempts']
-                }
-            })
-            self._is_connected = False
-            log_function_exit(self.logger, "connect", result="service_unavailable", execution_time=time.time() - start_time)
-            return False
-            
-        except AuthError as e:
-            self.logger.error(f"Neo4j authentication failed: {e}", extra={
-                'extra_data': {
-                    'uri': self.uri,
-                    'username': self.username,
-                    'error_type': 'AuthError'
-                }
-            })
-            self._is_connected = False
-            log_function_exit(self.logger, "connect", result="auth_error", execution_time=time.time() - start_time)
-            return False
-            
         except Exception as e:
-            self.logger.error(f"Failed to connect to Neo4j: {e}", exc_info=True, extra={
-                'extra_data': {
-                    'uri': self.uri,
-                    'error_type': type(e).__name__,
-                    'connection_attempt': self._stats['connection_attempts']
-                }
-            })
-            self._is_connected = False
-            log_function_exit(self.logger, "connect", result="error", execution_time=time.time() - start_time)
-            return False
+            # Debug: Check if this is ServiceUnavailable
+            if type(e).__name__ == 'ServiceUnavailable':
+                self.logger.error(f"Neo4j service unavailable: {e}", extra={
+                    'extra_data': {
+                        'uri': self.uri,
+                        'error_type': 'ServiceUnavailable',
+                        'connection_attempt': self._stats['connection_attempts']
+                    }
+                })
+                self._is_connected = False
+                log_function_exit(self.logger, "connect", result="service_unavailable", execution_time=time.time() - start_time)
+                return False
+            # Debug: Check if this is AuthError
+            elif type(e).__name__ == 'AuthError':
+                self.logger.error(f"Neo4j authentication failed: {e}", extra={
+                    'extra_data': {
+                        'uri': self.uri,
+                        'username': self.username,
+                        'error_type': 'AuthError'
+                    }
+                })
+                self._is_connected = False
+                log_function_exit(self.logger, "connect", result="auth_error", execution_time=time.time() - start_time)
+                return False
+            else:
+                self.logger.error(f"Failed to connect to Neo4j: {e}", exc_info=True, extra={
+                    'extra_data': {
+                        'uri': self.uri,
+                        'error_type': type(e).__name__,
+                        'connection_attempt': self._stats['connection_attempts']
+                    }
+                })
+                self._is_connected = False
+                log_function_exit(self.logger, "connect", result="error", execution_time=time.time() - start_time)
+                return False
+
     
     def disconnect(self) -> None:
         """Close Neo4j connection and cleanup resources."""

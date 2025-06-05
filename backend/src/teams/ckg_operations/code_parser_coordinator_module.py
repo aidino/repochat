@@ -103,14 +103,35 @@ class CodeParserCoordinatorModule:
             from .mock_parser import MockJavaParser
             self.register_parser(MockJavaParser())
         
-        # Register mock parsers for other languages (to be replaced with real implementations)
+        # Register real Python parser (Task 2.4) 
         try:
-            from .mock_parser import MockPythonParser, MockKotlinParser
-            self.register_parser(MockPythonParser()) 
-            self.register_parser(MockKotlinParser())
-            self.logger.info("Mock parsers registered for Python and Kotlin")
+            from .python_parser import PythonParser
+            self.register_parser(PythonParser())
+            self.logger.info("Real Python parser registered successfully")
         except ImportError as e:
-            self.logger.error(f"Failed to register mock parsers: {e}")
+            self.logger.warning(f"Python parser unavailable: {e}. Using mock parser.")
+            from .mock_parser import MockPythonParser
+            self.register_parser(MockPythonParser())
+        
+        # Register real Kotlin parser (Task 2.5)
+        try:
+            from .kotlin_parser import KotlinParser
+            self.register_parser(KotlinParser())
+            self.logger.info("Real Kotlin parser registered successfully")
+        except ImportError as e:
+            self.logger.warning(f"Kotlin parser unavailable: {e}. Using mock parser.")
+            from .mock_parser import MockKotlinParser
+            self.register_parser(MockKotlinParser())
+        
+        # Register real Dart parser (Task 2.5)
+        try:
+            from .dart_parser import DartParser
+            self.register_parser(DartParser())
+            self.logger.info("Real Dart parser registered successfully")
+        except ImportError as e:
+            self.logger.warning(f"Dart parser unavailable: {e}. Using mock parser.")
+            from .mock_parser import MockDartParser
+            self.register_parser(MockDartParser())
     
     def register_parser(self, parser: BaseLanguageParser) -> None:
         """
