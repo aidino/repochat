@@ -86,7 +86,31 @@ class CodeParserCoordinatorModule:
             init_time * 1000,
             "ms"
         )
+        # Register available parsers
+        self._register_default_parsers()
+        
         log_function_exit(self.logger, "__init__", result="success", execution_time=init_time)
+    
+    def _register_default_parsers(self) -> None:
+        """Register default language parsers."""
+        # Register real Java parser (Task 2.3)
+        try:
+            from .java_parser import JavaParser
+            self.register_parser(JavaParser())
+            self.logger.info("Real Java parser registered successfully")
+        except ImportError as e:
+            self.logger.warning(f"Java parser unavailable: {e}. Using mock parser.")
+            from .mock_parser import MockJavaParser
+            self.register_parser(MockJavaParser())
+        
+        # Register mock parsers for other languages (to be replaced with real implementations)
+        try:
+            from .mock_parser import MockPythonParser, MockKotlinParser
+            self.register_parser(MockPythonParser()) 
+            self.register_parser(MockKotlinParser())
+            self.logger.info("Mock parsers registered for Python and Kotlin")
+        except ImportError as e:
+            self.logger.error(f"Failed to register mock parsers: {e}")
     
     def register_parser(self, parser: BaseLanguageParser) -> None:
         """

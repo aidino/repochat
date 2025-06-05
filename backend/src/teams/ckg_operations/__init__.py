@@ -20,7 +20,7 @@ Main components:
 Phase 2 Implementation Status:
 ✅ Task 2.1: Neo4jConnectionModule - COMPLETED
 ✅ Task 2.2: CodeParserCoordinatorModule - COMPLETED
-⏳ Task 2.3: Java Parser - TODO
+✅ Task 2.3: Java Parser - COMPLETED
 ⏳ Task 2.4: Python Parser - TODO
 ⏳ Task 2.5: Kotlin/Dart Parser - TODO
 ⏳ Task 2.6: ASTtoCKGBuilderModule (nodes) - TODO
@@ -50,6 +50,14 @@ from .models import (
     VisibilityModifier
 )
 
+# Import real parsers if available
+try:
+    from .java_parser import JavaParser
+    _JAVA_PARSER_AVAILABLE = True
+except ImportError:
+    JavaParser = None
+    _JAVA_PARSER_AVAILABLE = False
+
 # Export public interface
 __all__ = [
     'Neo4jConnectionModule',
@@ -67,10 +75,11 @@ __all__ = [
     'CoordinatorParseResult',
     'CodeEntityType',
     'VisibilityModifier'
+    # Real parsers (available if dependencies installed)
+    'JavaParser',  # Available if javalang is installed
     # Future exports:
     # 'ASTtoCKGBuilderModule', 
     # 'CKGQueryInterfaceModule',
-    # 'JavaParser',
     # 'PythonParser',
     # 'KotlinParser',
     # 'DartParser'
