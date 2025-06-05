@@ -74,7 +74,7 @@ class Neo4jConnectionModule:
         # Connection configuration with defaults
         self.uri = uri or os.getenv('NEO4J_URI', 'bolt://localhost:7687')
         self.username = username or os.getenv('NEO4J_USERNAME', 'neo4j')
-        self.password = password or os.getenv('NEO4J_PASSWORD', 'password')
+        self.password = password or os.getenv('NEO4J_PASSWORD', 'repochat123')
         self.database = database
         
         # Connection state

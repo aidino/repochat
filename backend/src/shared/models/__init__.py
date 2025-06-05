@@ -8,3 +8,5 @@ from .task_definition import TaskDefinition
 from .project_data_context import ProjectDataContext
 
 __all__ = ["TaskDefinition", "ProjectDataContext"]
+
+from .git_models import CloneResult, GitMetadata

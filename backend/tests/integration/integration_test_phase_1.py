@@ -33,7 +33,7 @@ from teams.data_acquisition import (
 )
 from teams.ckg_operations import (
     CKGQueryInterfaceModule,
-    ASTParserModule,
+    
     Neo4jConnectionModule
 )
 from shared.models.project_data_context import ProjectDataContext, PRDiffInfo

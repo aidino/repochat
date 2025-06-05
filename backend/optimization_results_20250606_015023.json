@@ -1,0 +1,62 @@
+{
+  "timestamp": "2025-06-06T01:50:23.644132",
+  "total_execution_time": 9.369803,
+  "summary": {
+    "phase_1": {
+      "total_tests": 9,
+      "passed_tests": 0,
+      "success_rate": 0.0
+    }
+  },
+  "detailed_results": {
+    "phase_1": {
+      "git_operations": {
+        "small_java": {
+          "status": "FAILED",
+          "error": "'str' object has no attribute 'success'",
+          "clone_time": 1.501211166381836
+        },
+        "medium_python": {
+          "status": "FAILED",
+          "error": "'str' object has no attribute 'success'",
+          "clone_time": 1.7043778896331787
+        }
+      },
+      "language_detection": {
+        "small_java": {
+          "status": "FAILED",
+          "error": "'str' object has no attribute 'success'"
+        },
+        "medium_python": {
+          "status": "FAILED",
+          "error": "'str' object has no attribute 'success'"
+        }
+      },
+      "data_preparation": {
+        "small_java": {
+          "status": "FAILED",
+          "error": "'str' object has no attribute 'success'"
+        },
+        "medium_python": {
+          "status": "FAILED",
+          "error": "'str' object has no attribute 'success'"
+        }
+      },
+      "pat_handling": {
+        "github_public": {
+          "status": "FAILED",
+          "error": "'PATHandlerModule' object has no attribute 'requires_authentication'"
+        },
+        "github_private": {
+          "status": "FAILED",
+          "error": "'PATHandlerModule' object has no attribute 'requires_authentication'"
+        },
+        "gitlab_private": {
+          "status": "FAILED",
+          "error": "'PATHandlerModule' object has no attribute 'requires_authentication'"
+        }
+      }
+    }
+  },
+  "recommendations": []
+}

@@ -1,0 +1,197 @@
+{
+  "timestamp": "2025-06-06T02:00:20.632555",
+  "total_execution_time_seconds": 8.765727,
+  "summary": {
+    "total_tests": 18,
+    "successful_tests": 12,
+    "success_rate_percent": 66.66666666666666,
+    "phase_4_ready": false
+  },
+  "detailed_results": {
+    "basic_functionality": {
+      "neo4j_connection": {
+        "success": true,
+        "connection_time_ms": 34.768104553222656,
+        "query_time_ms": 4.865884780883789,
+        "batch_time_ms": 34.96909141540527,
+        "within_benchmark": true,
+        "test_result": [
+          {
+            "result": "enhanced test"
+          }
+        ]
+      },
+      "git_operations": {
+        "success": true,
+        "clone_time_ms": 1769.2339420318604,
+        "repository_size_mb": 1.798253059387207,
+        "within_benchmark": true,
+        "local_path": "/var/folders/66/6rbnzyf91v9d5v8nb46hmn0h0000gn/T/tmpfythipy8"
+      },
+      "language_detection": {
+        "success": true,
+        "detection_time_ms": 9.796857833862305,
+        "detected_languages": [
+          "python",
+          "cpp",
+          "c"
+        ],
+        "languages_count": 3,
+        "within_benchmark": true
+      },
+      "data_preparation": {
+        "success": true,
+        "preparation_time_ms": 0.32830238342285156,
+        "context_valid": true,
+        "languages_count": 2,
+        "repository_path": "/var/folders/66/6rbnzyf91v9d5v8nb46hmn0h0000gn/T/tmphbh4gufu"
+      }
+    },
+    "performance_benchmarks": {},
+    "error_recovery": {
+      "invalid_git_url": {
+        "success": true,
+        "duration_ms": 2512.187957763672,
+        "error_handled_gracefully": true,
+        "details": {
+          "success": true,
+          "graceful": true,
+          "handled_count": 3,
+          "total_count": 3,
+          "success_rate": 1.0
+        }
+      },
+      "network_timeout": {
+        "success": true,
+        "duration_ms": 0.00095367431640625,
+        "error_handled_gracefully": true,
+        "details": {
+          "success": true,
+          "graceful": true,
+          "note": "Simulated test - implement v\u1edbi network mocking"
+        }
+      },
+      "permission_denied": {
+        "success": true,
+        "duration_ms": 0.0030994415283203125,
+        "error_handled_gracefully": true,
+        "details": {
+          "success": true,
+          "graceful": true,
+          "note": "Simulated test - implement v\u1edbi permission mocking"
+        }
+      },
+      "disk_space_full": {
+        "success": true,
+        "duration_ms": 0.0,
+        "error_handled_gracefully": true,
+        "details": {
+          "success": true,
+          "graceful": true,
+          "note": "Simulated test - implement v\u1edbi disk space mocking"
+        }
+      },
+      "neo4j_unavailable": {
+        "success": true,
+        "duration_ms": 5.007028579711914,
+        "error_handled_gracefully": true,
+        "details": {
+          "success": true,
+          "graceful": true,
+          "connection_time_ms": 4.2629241943359375,
+          "handled_correctly": true
+        }
+      }
+    },
+    "concurrent_operations": {
+      "success": true,
+      "note": "Concurrent testing implementation needed"
+    },
+    "memory_stress": {
+      "success": true,
+      "max_memory_usage_mb": 0.0,
+      "memory_usage_history": [
+        0.0,
+        0.0
+      ],
+      "within_limits": true
+    },
+    "real_world_scenarios": {
+      "medium_java_project": {
+        "success": true,
+        "duration_ms": 0.00095367431640625,
+        "details": {
+          "success": true,
+          "note": "Java project testing implementation needed"
+        }
+      },
+      "python_web_framework": {
+        "success": true,
+        "duration_ms": 0.00095367431640625,
+        "details": {
+          "success": true,
+          "note": "Python framework testing implementation needed"
+        }
+      },
+      "multiple_languages": {
+        "success": true,
+        "duration_ms": 0.0,
+        "details": {
+          "success": true,
+          "note": "Multi-language testing implementation needed"
+        }
+      }
+    }
+  },
+  "performance_summary": {
+    "neo4j_connection": {
+      "duration_ms": 1003.6580562591553,
+      "memory_usage_mb": 117.484375
+    },
+    "git_operations": {
+      "duration_ms": 1880.93900680542,
+      "memory_usage_mb": 1.734375
+    },
+    "language_detection": {
+      "duration_ms": 1664.5519733428955,
+      "memory_usage_mb": 0.1875
+    },
+    "data_preparation": {
+      "duration_ms": 1696.6021060943604,
+      "memory_usage_mb": 0.015625
+    }
+  },
+  "test_metrics": [
+    {
+      "test_name": "neo4j_connection",
+      "duration_ms": 1003.6580562591553,
+      "memory_usage_mb": 117.484375,
+      "success": true
+    },
+    {
+      "test_name": "git_operations",
+      "duration_ms": 1880.93900680542,
+      "memory_usage_mb": 1.734375,
+      "success": true
+    },
+    {
+      "test_name": "language_detection",
+      "duration_ms": 1664.5519733428955,
+      "memory_usage_mb": 0.1875,
+      "success": true
+    },
+    {
+      "test_name": "data_preparation",
+      "duration_ms": 1696.6021060943604,
+      "memory_usage_mb": 0.015625,
+      "success": true
+    }
+  ],
+  "recommendations": [
+    "\u26a0\ufe0f Critical issues found. Address before Phase 4",
+    "\ud83d\udee0\ufe0f Review error recovery mechanisms",
+    "\u26a1 Performance optimization needed",
+    "\ud83d\udcd6 Update documentation v\u1edbi current test results",
+    "\ud83d\ude80 Proceed v\u1edbi Phase 4 CLI implementation"
+  ]
+}

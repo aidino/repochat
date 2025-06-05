@@ -1,0 +1,191 @@
+{
+  "timestamp": "2025-06-06T01:59:18.515275",
+  "total_execution_time_seconds": 8.866059,
+  "summary": {
+    "total_tests": 18,
+    "successful_tests": 11,
+    "success_rate_percent": 61.111111111111114,
+    "phase_4_ready": false
+  },
+  "detailed_results": {
+    "basic_functionality": {
+      "neo4j_connection": {
+        "success": true,
+        "connection_time_ms": 24.817943572998047,
+        "query_time_ms": 68.88723373413086,
+        "batch_time_ms": 106.18901252746582,
+        "within_benchmark": true,
+        "test_result": [
+          {
+            "result": "enhanced test"
+          }
+        ]
+      },
+      "git_operations": {
+        "success": true,
+        "clone_time_ms": 1567.5358772277832,
+        "repository_size_mb": 1.797586441040039,
+        "within_benchmark": true,
+        "local_path": "/var/folders/66/6rbnzyf91v9d5v8nb46hmn0h0000gn/T/tmphqn2e0xi"
+      },
+      "language_detection": {
+        "success": true,
+        "detection_time_ms": 9.922027587890625,
+        "detected_languages": [
+          "python",
+          "cpp",
+          "c"
+        ],
+        "languages_count": 3,
+        "within_benchmark": true
+      },
+      "data_preparation": {
+        "success": false,
+        "error": "'DataPreparationModule' object has no attribute 'prepare_project_context'"
+      }
+    },
+    "performance_benchmarks": {},
+    "error_recovery": {
+      "invalid_git_url": {
+        "success": true,
+        "duration_ms": 2978.147029876709,
+        "error_handled_gracefully": true,
+        "details": {
+          "success": true,
+          "graceful": true,
+          "handled_count": 3,
+          "total_count": 3,
+          "success_rate": 1.0
+        }
+      },
+      "network_timeout": {
+        "success": true,
+        "duration_ms": 0.00095367431640625,
+        "error_handled_gracefully": true,
+        "details": {
+          "success": true,
+          "graceful": true,
+          "note": "Simulated test - implement v\u1edbi network mocking"
+        }
+      },
+      "permission_denied": {
+        "success": true,
+        "duration_ms": 0.0016689300537109375,
+        "error_handled_gracefully": true,
+        "details": {
+          "success": true,
+          "graceful": true,
+          "note": "Simulated test - implement v\u1edbi permission mocking"
+        }
+      },
+      "disk_space_full": {
+        "success": true,
+        "duration_ms": 0.0,
+        "error_handled_gracefully": true,
+        "details": {
+          "success": true,
+          "graceful": true,
+          "note": "Simulated test - implement v\u1edbi disk space mocking"
+        }
+      },
+      "neo4j_unavailable": {
+        "success": true,
+        "duration_ms": 2.1910667419433594,
+        "error_handled_gracefully": true,
+        "details": {
+          "success": true,
+          "graceful": true,
+          "connection_time_ms": 1.8739700317382812,
+          "handled_correctly": true
+        }
+      }
+    },
+    "concurrent_operations": {
+      "success": true,
+      "note": "Concurrent testing implementation needed"
+    },
+    "memory_stress": {
+      "success": true,
+      "max_memory_usage_mb": 0.0,
+      "memory_usage_history": [
+        0.0,
+        0.0
+      ],
+      "within_limits": true
+    },
+    "real_world_scenarios": {
+      "medium_java_project": {
+        "success": true,
+        "duration_ms": 0.0,
+        "details": {
+          "success": true,
+          "note": "Java project testing implementation needed"
+        }
+      },
+      "python_web_framework": {
+        "success": true,
+        "duration_ms": 0.00095367431640625,
+        "details": {
+          "success": true,
+          "note": "Python framework testing implementation needed"
+        }
+      },
+      "multiple_languages": {
+        "success": true,
+        "duration_ms": 0.0,
+        "details": {
+          "success": true,
+          "note": "Multi-language testing implementation needed"
+        }
+      }
+    }
+  },
+  "performance_summary": {
+    "neo4j_connection": {
+      "duration_ms": 1061.0640048980713,
+      "memory_usage_mb": 116.875
+    },
+    "git_operations": {
+      "duration_ms": 1678.7831783294678,
+      "memory_usage_mb": -3.953125
+    },
+    "language_detection": {
+      "duration_ms": 1553.14302444458,
+      "memory_usage_mb": 0.0625
+    }
+  },
+  "test_metrics": [
+    {
+      "test_name": "neo4j_connection",
+      "duration_ms": 1061.0640048980713,
+      "memory_usage_mb": 116.875,
+      "success": true
+    },
+    {
+      "test_name": "git_operations",
+      "duration_ms": 1678.7831783294678,
+      "memory_usage_mb": -3.953125,
+      "success": true
+    },
+    {
+      "test_name": "language_detection",
+      "duration_ms": 1553.14302444458,
+      "memory_usage_mb": 0.0625,
+      "success": true
+    },
+    {
+      "test_name": "data_preparation",
+      "duration_ms": 1589.5581245422363,
+      "memory_usage_mb": -5.03125,
+      "success": false
+    }
+  ],
+  "recommendations": [
+    "\u26a0\ufe0f Critical issues found. Address before Phase 4",
+    "\ud83d\udee0\ufe0f Review error recovery mechanisms",
+    "\u26a1 Performance optimization needed",
+    "\ud83d\udd34 Fix data_preparation - 'DataPreparationModule' object has no attribute 'prepare_project_context'",
+    "\ud83d\udcd6 Update documentation v\u1edbi current test results",
+    "\ud83d\ude80 Proceed v\u1edbi Phase 4 CLI implementation"
+  ]
+}

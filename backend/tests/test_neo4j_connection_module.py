@@ -24,10 +24,11 @@ class TestNeo4jConnectionModule:
         
         assert module.uri == 'bolt://localhost:7687'
         assert module.username == 'neo4j'
-        assert module.password == 'password'
+        assert module.password == 'repochat123'
         assert module.database == 'neo4j'
         assert not module.is_connected()
         assert module._stats['queries_executed'] == 0
+
     
     def test_initialization_with_custom_params(self):
         """Test module initialization with custom parameters."""

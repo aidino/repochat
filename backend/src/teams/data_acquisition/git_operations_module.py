@@ -1,3 +1,4 @@
+from src.shared.models import CloneResult, GitMetadata
 """
 GitOperationsModule - TEAM Data Acquisition
 
@@ -345,7 +346,11 @@ class GitOperationsModule:
                 execution_time=total_duration
             )
             
-            return str(clone_path)
+            return CloneResult(
+                success=True,
+                local_path=str(clone_path),
+                metadata=repo_info
+            )
             
         except GitCommandError as e:
             error_msg = f"Git operation failed for {repository_url}: {e}"
