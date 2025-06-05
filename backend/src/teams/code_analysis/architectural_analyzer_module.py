@@ -709,6 +709,18 @@ class ArchitecturalAnalyzerModule:
         
         return recommendations
 
+    def detect_unused_elements(self, project_name: str) -> AnalysisResult:
+        """
+        Alias for detect_unused_public_elements for backward compatibility.
+        
+        Args:
+            project_name: Name of the project to analyze
+            
+        Returns:
+            AnalysisResult containing unused element findings
+        """
+        return self.detect_unused_public_elements(project_name)
+
     def analyze_project_architecture(self, project_name: str) -> AnalysisResult:
         """
         Perform comprehensive architectural analysis of a project.

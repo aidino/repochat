@@ -114,6 +114,27 @@ class LLMAnalysisSupportModule:
         logger.info(f"Created explain_code request: {request.request_id}")
         return request
     
+    def prepare_code_explanation_request(
+        self, 
+        code_snippet: str, 
+        language: str = "python",
+        llm_config: Optional[LLMConfig] = None,
+        additional_context: Optional[Dict[str, Any]] = None
+    ) -> LLMServiceRequest:
+        """
+        Alias for create_explain_code_request for backward compatibility.
+        
+        Args:
+            code_snippet: Đoạn code cần giải thích
+            language: Ngôn ngữ lập trình
+            llm_config: Cấu hình LLM (nếu None, dùng default)
+            additional_context: Context bổ sung
+            
+        Returns:
+            LLMServiceRequest: Request đã được format
+        """
+        return self.create_explain_code_request(code_snippet, language, llm_config, additional_context)
+    
     def create_analyze_function_request(
         self,
         function_name: str,
