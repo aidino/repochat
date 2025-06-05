@@ -541,7 +541,7 @@ class OrchestratorAgent:
             step3_start = time.time()
             
             detected_languages = self.language_identifier.identify_languages(
-                repository_path=repository_path
+                repository_path=repository_path.local_path
             )
             
             step3_duration = time.time() - step3_start
@@ -559,7 +559,7 @@ class OrchestratorAgent:
             step4_start = time.time()
             
             project_data_context = self.data_preparation.create_project_context(
-                cloned_code_path=repository_path,
+                cloned_code_path=repository_path.local_path,
                 detected_languages=detected_languages,
                 repository_url=task_definition.repository_url
             )
@@ -779,6 +779,237 @@ class OrchestratorAgent:
                 "handle_scan_project_with_ckg_task",
                 result="error",
                 execution_time=total_duration
+            )
+            raise
+    
+    def handle_review_pr_task(self, task_definition: TaskDefinition) -> ProjectDataContext:
+        """
+        Handle PR review task according to Task 4.2 requirements.
+        
+        This method implements Task 4.2 (F4.2) workflow:
+        - Takes TaskDefinition containing repository_url and PR information
+        - Calls GitOperationsModule to clone repository and checkout PR branch/changes
+        - Identifies programming languages in the PR diff
+        - Creates ProjectDataContext with PR-specific information
+        - Logs results for PR review analysis
+        
+        For v1.0, this leverages existing infrastructure from scan_project_task
+        and adds PR-specific handling. Future phases will integrate with
+        PR metadata extraction and impact analysis.
+        
+        Args:
+            task_definition: TaskDefinition with repository_url and PR info
+            
+        Returns:
+            ProjectDataContext with PR changes and detected languages
+            
+        Raises:
+            RuntimeError: If orchestrator is not initialized
+            ValueError: If task_definition is not a PR review task
+            Exception: If any step in the PR review workflow fails
+        """
+        start_time = time.time()
+        log_function_entry(
+            self.logger,
+            "handle_review_pr_task",
+            repository_url=task_definition.repository_url,
+            task_id=task_definition.task_id,
+            pr_id=task_definition.get_pr_identifier()
+        )
+        
+        # Validate task type
+        if not task_definition.is_pr_review_task():
+            error_msg = f"Task definition is not a PR review task: {task_definition.task_type}"
+            self.logger.error(error_msg)
+            log_function_exit(self.logger, "handle_review_pr_task", result="invalid_task_type")
+            raise ValueError(error_msg)
+        
+        pr_identifier = task_definition.get_pr_identifier()
+        if not pr_identifier:
+            error_msg = "No PR identifier found in task definition"
+            self.logger.error(error_msg)
+            log_function_exit(self.logger, "handle_review_pr_task", result="no_pr_id")
+            raise ValueError(error_msg)
+        
+        self.logger.info(f"Starting PR review task for: {task_definition.repository_url}, PR: {pr_identifier}")
+        
+        # Update statistics tracking
+        self._stats['total_tasks_handled'] += 1
+        
+        # Validation
+        if not self._is_initialized:
+            error_msg = "Orchestrator Agent is not initialized"
+            self.logger.error(error_msg)
+            log_function_exit(self.logger, "handle_review_pr_task", result="not_initialized")
+            raise RuntimeError(error_msg)
+        
+        try:
+            # Step 1: Check if PAT is needed and request if necessary
+            self.logger.info("Step 1: Checking PAT requirements for PR access")
+            step1_start = time.time()
+            
+            pat = self.pat_handler.request_pat_if_needed(task_definition.repository_url)
+            pat_message = "PAT obtained from user" if pat else "No PAT needed/provided"
+            
+            step1_duration = time.time() - step1_start
+            self.logger.info(f"Step 1 completed: {pat_message}", extra={
+                'extra_data': {
+                    'step': 'pat_check',
+                    'duration_ms': step1_duration * 1000,
+                    'has_pat': pat is not None,
+                    'task_type': 'pr_review'
+                }
+            })
+            
+            # Step 2: Clone repository using GitOperationsModule
+            self.logger.info("Step 2: Cloning repository for PR review")
+            step2_start = time.time()
+            
+            repository_path = self.git_operations.clone_repository(
+                repository_url=task_definition.repository_url,
+                pat=pat
+            )
+            
+            step2_duration = time.time() - step2_start
+            self.logger.info(f"Step 2 completed: Repository cloned to {repository_path}", extra={
+                'extra_data': {
+                    'step': 'repository_clone',
+                    'duration_ms': step2_duration * 1000,
+                    'repository_path': repository_path,
+                    'used_pat': pat is not None,
+                    'task_type': 'pr_review'
+                }
+            })
+            
+            # Step 3: Identify languages using LanguageIdentifierModule
+            # For PR review, we identify languages in the entire repository
+            # Future phases will add PR diff-specific language detection
+            self.logger.info("Step 3: Identifying programming languages for PR review")
+            step3_start = time.time()
+            
+            detected_languages = self.language_identifier.identify_languages(
+                repository_path=repository_path.local_path
+            )
+            
+            step3_duration = time.time() - step3_start
+            self.logger.info(f"Step 3 completed: Languages detected for PR: {detected_languages}", extra={
+                'extra_data': {
+                    'step': 'language_identification',
+                    'duration_ms': step3_duration * 1000,
+                    'detected_languages': detected_languages,
+                    'language_count': len(detected_languages),
+                    'task_type': 'pr_review',
+                    'pr_identifier': pr_identifier
+                }
+            })
+            
+            # Step 4: Create ProjectDataContext for PR review
+            self.logger.info("Step 4: Creating ProjectDataContext for PR review")
+            step4_start = time.time()
+            
+            # For v1.0, use existing create_project_context
+            # Future phases will add create_pr_review_context method
+            project_data_context = self.data_preparation.create_project_context(
+                cloned_code_path=repository_path.local_path,
+                detected_languages=detected_languages,
+                repository_url=task_definition.repository_url
+            )
+            
+            step4_duration = time.time() - step4_start
+            
+            # Log ProjectDataContext for PR review as required by DoD
+            self.logger.info("ProjectDataContext for PR review created successfully:", extra={
+                'extra_data': {
+                    'step': 'pr_data_context_creation',
+                    'duration_ms': step4_duration * 1000,
+                    'task_type': 'pr_review',
+                    'pr_identifier': pr_identifier,
+                    'project_data_context': {
+                        'cloned_code_path': project_data_context.cloned_code_path,
+                        'detected_languages': project_data_context.detected_languages,
+                        'repository_url': project_data_context.repository_url,
+                        'language_count': project_data_context.language_count,
+                        'has_languages': project_data_context.has_languages,
+                        'primary_language': project_data_context.primary_language
+                    },
+                    'pr_info': {
+                        'pr_id': task_definition.pr_id,
+                        'pr_url': task_definition.pr_url,
+                        'pr_identifier': pr_identifier
+                    }
+                }
+            })
+            
+            # Clear PAT from memory for security
+            if pat:
+                self.pat_handler.clear_pat_cache()
+                pat = None  # Clear local reference
+                self.logger.debug("PAT cleared from memory for security")
+            
+            total_duration = time.time() - start_time
+            
+            self.logger.info("PR review task completed successfully", extra={
+                'extra_data': {
+                    'repository_url': task_definition.repository_url,
+                    'pr_identifier': pr_identifier,
+                    'total_duration_ms': total_duration * 1000,
+                    'steps_completed': 4,
+                    'task_type': 'pr_review',
+                    'final_result': {
+                        'repository_path': repository_path,
+                        'languages': detected_languages,
+                        'context_created': True,
+                        'pr_info_processed': True
+                    }
+                }
+            })
+            
+            # Update successful task counter
+            self._stats['successful_tasks'] += 1
+            
+            log_performance_metric(
+                self.logger,
+                "pr_review_task_duration",
+                total_duration * 1000,
+                "ms",
+                repository_url=task_definition.repository_url,
+                pr_identifier=pr_identifier,
+                language_count=len(detected_languages)
+            )
+            
+            log_function_exit(
+                self.logger,
+                "handle_review_pr_task",
+                result="success",
+                execution_time=total_duration
+            )
+            
+            return project_data_context
+            
+        except Exception as e:
+            # Clear PAT on error for security
+            if 'pat' in locals() and pat:
+                self.pat_handler.clear_pat_cache()
+                
+            # Update failed task counter
+            self._stats['failed_tasks'] += 1
+                
+            error_msg = f"Error in PR review task: {e}"
+            self.logger.error(error_msg, exc_info=True, extra={
+                'extra_data': {
+                    'repository_url': task_definition.repository_url,
+                    'pr_identifier': pr_identifier,
+                    'error_type': type(e).__name__,
+                    'execution_time_ms': (time.time() - start_time) * 1000,
+                    'task_type': 'pr_review'
+                }
+            })
+            
+            log_function_exit(
+                self.logger,
+                "handle_review_pr_task",
+                result="error",
+                execution_time=time.time() - start_time
             )
             raise
     

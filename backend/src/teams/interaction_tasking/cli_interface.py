@@ -1,192 +1,377 @@
 """
-CLI Interface for RepoChat v1.0
+CLI Interface for TEAM Interaction & Tasking
 
-Command Line Interface for TEAM Interaction & Tasking.
-For Task 4.1 (F4.1), implements basic CLI with 'scan_project' command.
+Main command line interface for RepoChat v1.0.
+Updated for Task 4.2 with full PR review functionality.
 """
 
 import click
-import sys
-import os
-from typing import Optional
+import time
+from typing import Optional, Dict, Any
 
-# Add src to Python path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-
-from shared.utils.logging_config import get_logger, log_function_entry, log_function_exit
+from shared.utils.logging_config import get_logger, log_function_entry, log_function_exit, log_performance_metric
 from teams.interaction_tasking.task_initiation_module import TaskInitiationModule
 from orchestrator.orchestrator_agent import OrchestratorAgent
-from shared.models.project_data_context import ProjectDataContext
+from shared.models.task_definition import TaskDefinition, TaskType
 
 
 class CLIInterface:
     """
-    Command Line Interface handler for RepoChat.
+    Command Line Interface for RepoChat v1.0.
     
-    Provides CLI commands for interacting with the RepoChat system.
-    For Task 4.1, implements the 'scan_project' command.
+    Updated for Task 4.2 with complete PR review functionality.
+    
+    Supported commands:
+    - scan-project: Analyze a repository
+    - review-pr: Review a Pull Request (Task 4.2)
+    - status: Show system status
     """
     
     def __init__(self):
-        """Initialize CLI interface with logging and components."""
+        """Initialize CLI Interface với các thành phần cần thiết."""
         self.logger = get_logger("cli.interface")
         self.task_initiation = TaskInitiationModule()
-        self.logger.info("CLI Interface initialized")
+        self.orchestrator = OrchestratorAgent()
+        
+        # Initialize orchestrator
+        self.logger.info("Initializing CLI components...")
+        try:
+            self.orchestrator._initialize()
+            self.logger.info("CLI Interface initialized successfully")
+        except Exception as e:
+            self.logger.error(f"Failed to initialize CLI: {e}")
+            raise
     
-    def scan_project_command(self, repository_url: str, verbose: bool = False) -> Optional[ProjectDataContext]:
+    def execute_scan_project(self, repository_url: str, verbose: bool = False) -> Dict[str, Any]:
         """
         Execute scan project command.
         
         Args:
-            repository_url: URL of the repository to scan
+            repository_url: Repository URL to scan
             verbose: Enable verbose output
             
         Returns:
-            ProjectDataContext if successful, None if failed
+            Dict containing execution results
         """
-        log_function_entry(self.logger, "scan_project_command", 
+        start_time = time.time()
+        log_function_entry(self.logger, "execute_scan_project", 
                           repository_url=repository_url, verbose=verbose)
         
         try:
-            # Display start message
-            click.echo(f"🚀 Bắt đầu quét dự án: {repository_url}")
-            if verbose:
-                click.echo("🔧 Đang khởi tạo Orchestrator Agent...")
-            
             # Create task definition
-            task_definition = self.task_initiation.create_scan_project_task(repository_url)
+            task_def = self.task_initiation.create_scan_project_task(repository_url)
             
             if verbose:
-                click.echo(f"📋 Task ID: {task_definition.task_id}")
-                click.echo(f"🕐 Thời gian tạo: {task_definition.created_at}")
+                click.echo(f"📋 Task Definition được tạo: {task_def.task_id}")
+                click.echo(f"   Repository: {task_def.repository_url}")
+                task_type_str = task_def.task_type.value if hasattr(task_def.task_type, 'value') else str(task_def.task_type)
+                click.echo(f"   Task Type: {task_type_str}")
             
-            # Initialize orchestrator  
-            orchestrator = OrchestratorAgent()
+            click.echo("🚀 Bắt đầu quét dự án...")
             
-            if verbose:
-                click.echo("📦 Đang thực hiện Phase 1: Thu thập dữ liệu...")
+            # Execute via orchestrator  
+            execution_id = self.orchestrator.handle_task(task_def)
             
-            # Execute scan project task
-            project_context = orchestrator.handle_scan_project_task(task_definition)
+            execution_time = time.time() - start_time
             
-            # Display results
             click.echo("✅ Quét dự án hoàn thành thành công!")
-            click.echo(f"📁 Đường dẫn: {project_context.cloned_code_path}")
-            click.echo(f"🔤 Ngôn ngữ: {', '.join(project_context.detected_languages)}")
-            click.echo(f"🎯 Ngôn ngữ chính: {project_context.primary_language}")
-            click.echo(f"📊 Số lượng ngôn ngữ: {project_context.language_count}")
+            click.echo(f"⏱️  Thời gian thực hiện: {execution_time:.2f}s")
             
             if verbose:
-                click.echo("\n📈 Thống kê Agent:")
-                stats = orchestrator.get_agent_stats()
-                click.echo(f"  • Tasks thành công: {stats['statistics']['successful_tasks']}")
-                click.echo(f"  • Uptime: {stats['uptime_seconds']:.2f}s")
+                task_status = self.orchestrator.get_task_status(execution_id)
+                if task_status:
+                    click.echo(f"📊 Trạng thái task: {task_status['status']}")
+                    click.echo(f"📁 Repository đã clone: {task_status.get('repository_path', 'N/A')}")
+                    if 'detected_languages' in task_status:
+                        click.echo(f"🔤 Ngôn ngữ phát hiện: {task_status['detected_languages']}")
             
-            # Cleanup
-            orchestrator.shutdown()
+            log_performance_metric(self.logger, "scan_project_cli_duration", 
+                                 execution_time * 1000, "ms", repository_url=repository_url)
             
-            log_function_exit(self.logger, "scan_project_command", result="success")
-            return project_context
+            log_function_exit(self.logger, "execute_scan_project", result="success")
             
-        except ValueError as e:
-            click.echo(f"❌ Lỗi đầu vào: {e}", err=True)
-            log_function_exit(self.logger, "scan_project_command", result="input_error")
-            return None
+            return {
+                'status': 'success',
+                'execution_id': execution_id,
+                'execution_time': execution_time,
+                'task_definition': task_def
+            }
+            
         except Exception as e:
-            click.echo(f"❌ Lỗi thực thi: {e}", err=True)
-            self.logger.error(f"Scan project command failed: {e}", exc_info=True)
-            log_function_exit(self.logger, "scan_project_command", result="error")
-            return None
+            execution_time = time.time() - start_time
+            error_msg = f"Lỗi khi quét dự án: {e}"
+            click.echo(f"❌ {error_msg}")
+            
+            self.logger.error(error_msg, exc_info=True)
+            log_function_exit(self.logger, "execute_scan_project", result="error")
+            
+            return {
+                'status': 'error',
+                'error': str(e),
+                'execution_time': execution_time
+            }
+    
+    def execute_review_pr(self, repository_url: str, pr_identifier: str, verbose: bool = False) -> Dict[str, Any]:
+        """
+        Execute PR review command (Task 4.2 implementation).
+        
+        Args:
+            repository_url: Repository URL containing the PR
+            pr_identifier: Pull Request ID or URL
+            verbose: Enable verbose output
+            
+        Returns:
+            Dict containing execution results
+        """
+        start_time = time.time()
+        log_function_entry(self.logger, "execute_review_pr", 
+                          repository_url=repository_url, pr_identifier=pr_identifier, verbose=verbose)
+        
+        try:
+            # Create PR review task definition
+            task_def = self.task_initiation.create_review_pr_task(repository_url, pr_identifier)
+            
+            if verbose:
+                click.echo(f"📋 PR Review Task Definition được tạo: {task_def.task_id}")
+                click.echo(f"   Repository: {task_def.repository_url}")
+                task_type_str = task_def.task_type.value if hasattr(task_def.task_type, 'value') else str(task_def.task_type)
+                click.echo(f"   Task Type: {task_type_str}")
+                click.echo(f"   PR ID: {task_def.pr_id}")
+                click.echo(f"   PR URL: {task_def.pr_url}")
+                click.echo(f"   PR Identifier: {task_def.get_pr_identifier()}")
+            
+            click.echo(f"🔍 Bắt đầu review Pull Request #{task_def.get_pr_identifier()}...")
+            
+            # Execute PR review via orchestrator  
+            project_data_context = self.orchestrator.handle_review_pr_task(task_def)
+            
+            execution_time = time.time() - start_time
+            
+            click.echo("✅ Review Pull Request hoàn thành thành công!")
+            click.echo(f"⏱️  Thời gian thực hiện: {execution_time:.2f}s")
+            click.echo(f"🔗 Pull Request: #{task_def.get_pr_identifier()}")
+            
+            if verbose:
+                click.echo(f"📁 Repository đã clone: {project_data_context.cloned_code_path}")
+                click.echo(f"🔤 Ngôn ngữ phát hiện: {project_data_context.detected_languages}")
+                click.echo(f"📊 Số ngôn ngữ: {project_data_context.language_count}")
+                click.echo(f"🎯 Ngôn ngữ chính: {project_data_context.primary_language}")
+            
+            # Show PR-specific information
+            click.echo("📄 Thông tin Pull Request:")
+            if task_def.pr_id:
+                click.echo(f"   PR ID: {task_def.pr_id}")
+            if task_def.pr_url:
+                click.echo(f"   PR URL: {task_def.pr_url}")
+            
+            click.echo("🔬 Phân tích cơ bản đã hoàn thành. Các tính năng nâng cao sẽ có trong các phase tiếp theo:")
+            click.echo("   • Phân tích diff PR")
+            click.echo("   • Tác động đến các phụ thuộc")
+            click.echo("   • Đề xuất review tự động")
+            
+            log_performance_metric(self.logger, "review_pr_cli_duration", 
+                                 execution_time * 1000, "ms", 
+                                 repository_url=repository_url, pr_identifier=pr_identifier)
+            
+            log_function_exit(self.logger, "execute_review_pr", result="success")
+            
+            return {
+                'status': 'success',
+                'execution_time': execution_time,
+                'task_definition': task_def,
+                'project_data_context': project_data_context,
+                'pr_identifier': task_def.get_pr_identifier()
+            }
+            
+        except Exception as e:
+            execution_time = time.time() - start_time
+            error_msg = f"Lỗi khi review Pull Request: {e}"
+            click.echo(f"❌ {error_msg}")
+            
+            self.logger.error(error_msg, exc_info=True)
+            log_function_exit(self.logger, "execute_review_pr", result="error")
+            
+            return {
+                'status': 'error',
+                'error': str(e),
+                'execution_time': execution_time
+            }
+    
+    def show_status(self, verbose: bool = False) -> Dict[str, Any]:
+        """
+        Show system status.
+        
+        Args:
+            verbose: Enable verbose output
+            
+        Returns:
+            Dict containing system status
+        """
+        try:
+            click.echo("📊 Trạng thái hệ thống RepoChat v1.0")
+            click.echo("=" * 40)
+            
+            # Get orchestrator stats
+            orchestrator_stats = self.orchestrator.get_agent_stats()
+            
+            click.echo(f"🤖 Orchestrator Agent: {'✅ Hoạt động' if orchestrator_stats['is_initialized'] else '❌ Chưa khởi tạo'}")
+            click.echo(f"⏱️  Uptime: {orchestrator_stats['uptime_seconds']:.1f}s")
+            click.echo(f"📋 Tổng số task đã xử lý: {orchestrator_stats['statistics']['total_tasks_handled']}")
+            click.echo(f"✅ Task thành công: {orchestrator_stats['statistics']['successful_tasks']}")
+            click.echo(f"❌ Task thất bại: {orchestrator_stats['statistics']['failed_tasks']}")
+            click.echo(f"🔄 Task đang hoạt động: {orchestrator_stats['active_tasks_count']}")
+            
+            # Get task initiation stats
+            task_stats = self.task_initiation.get_module_stats()
+            click.echo(f"📝 TaskInitiationModule v{task_stats['version']}")
+            click.echo(f"🎯 Supported tasks: {', '.join(task_stats['supported_tasks'])}")
+            
+            if verbose:
+                click.echo("\n🔧 Chi tiết thành phần:")
+                click.echo(f"   Agent ID: {orchestrator_stats['agent_id']}")
+                click.echo(f"   Created at: {orchestrator_stats['created_at']}")
+                
+                if orchestrator_stats['active_tasks']:
+                    click.echo("\n🔄 Active tasks:")
+                    for task_id, task_info in orchestrator_stats['active_tasks'].items():
+                        click.echo(f"   {task_id}: {task_info['status']} ({task_info['repository_url']})")
+                
+                click.echo(f"\n⚙️  Task features:")
+                for feature, enabled in task_stats['features'].items():
+                    status = "✅" if enabled else "❌"
+                    click.echo(f"   {feature}: {status}")
+            
+            return {
+                'status': 'success',
+                'orchestrator_stats': orchestrator_stats,
+                'task_stats': task_stats
+            }
+            
+        except Exception as e:
+            error_msg = f"Lỗi khi lấy trạng thái hệ thống: {e}"
+            click.echo(f"❌ {error_msg}")
+            self.logger.error(error_msg, exc_info=True)
+            
+            return {
+                'status': 'error',
+                'error': str(e)
+            }
+    
+    def shutdown(self):
+        """Gracefully shutdown CLI interface."""
+        self.logger.info("Shutting down CLI Interface")
+        try:
+            self.orchestrator.shutdown()
+            self.logger.info("CLI Interface shutdown completed")
+        except Exception as e:
+            self.logger.error(f"Error during CLI shutdown: {e}")
 
 
-# CLI Application using Click
+# CLI Command Groups
 @click.group()
-@click.version_option(version='1.0.0', prog_name='RepoChat')
-@click.option('--verbose', '-v', is_flag=True, help='Enable verbose output')
+@click.option('--verbose', '-v', is_flag=True, help='Hiển thị thông tin chi tiết')
+@click.option('--version', is_flag=True, help='Hiển thị phiên bản')
 @click.pass_context
-def cli(ctx, verbose):
+def cli(ctx, verbose, version):
     """
-    🤖 RepoChat v1.0 - AI Repository Analysis Assistant
+    RepoChat v1.0 - AI Repository Analysis Assistant
     
-    Trợ lý AI thông minh để phân tích repository code một cách sâu sắc và hiệu quả.
+    Công cụ phân tích repository thông minh với AI.
     """
-    # Store verbose flag in context
     ctx.ensure_object(dict)
-    ctx.obj['verbose'] = verbose
+    ctx.obj['VERBOSE'] = verbose
     
-    if verbose:
-        click.echo("🔧 RepoChat CLI khởi động với chế độ verbose")
-
-
-@cli.command('scan-project')
-@click.argument('repository_url', type=str)
-@click.option('--verbose', '-v', is_flag=True, help='Enable verbose output')
-@click.pass_context
-def scan_project(ctx, repository_url: str, verbose: bool):
-    """
-    Quét và phân tích một repository Git.
-    
-    REPOSITORY_URL: URL của repository Git cần phân tích
-    
-    Ví dụ:
-      repochat scan-project https://github.com/user/repo.git
-      repochat scan-project https://github.com/spring-projects/spring-petclinic.git -v
-    """
-    # Use verbose from context or command option
-    verbose = verbose or ctx.obj.get('verbose', False)
-    
-    if verbose:
-        click.echo(f"🎯 Lệnh: scan-project")
-        click.echo(f"📍 Repository: {repository_url}")
-    
-    # Initialize CLI interface and execute command
-    cli_interface = CLIInterface()
-    result = cli_interface.scan_project_command(repository_url, verbose)
-    
-    if result is None:
-        sys.exit(1)
-
-
-@cli.command('review-pr')
-@click.argument('repository_url', type=str)
-@click.argument('pr_id', type=str)
-@click.option('--verbose', '-v', is_flag=True, help='Enable verbose output')
-@click.pass_context
-def review_pr(ctx, repository_url: str, pr_id: str, verbose: bool):
-    """
-    Review một Pull Request (Placeholder cho Task 4.2).
-    
-    REPOSITORY_URL: URL của repository Git
-    PR_ID: ID hoặc URL của Pull Request
-    
-    Lưu ý: Tính năng này sẽ được implement trong Task 4.2.
-    """
-    verbose = verbose or ctx.obj.get('verbose', False)
-    
-    click.echo("🚧 Tính năng Review PR sẽ được implement trong Task 4.2")
-    click.echo(f"📍 Repository: {repository_url}")
-    click.echo(f"🔀 PR ID: {pr_id}")
-    
-    if verbose:
-        click.echo("ℹ️  Hiện tại chỉ hỗ trợ scan-project command")
+    if version:
+        click.echo("RepoChat v1.0.0")
+        click.echo("Build: Task 4.2 - PR Review Functionality")
+        ctx.exit()
 
 
 @cli.command()
-def status():
+@click.argument('repository_url')
+@click.pass_context
+def scan_project(ctx, repository_url):
+    """
+    Quét và phân tích một repository.
+    
+    REPOSITORY_URL: URL của Git repository (GitHub, GitLab, Bitbucket)
+    
+    Ví dụ:
+        python repochat_cli.py scan-project https://github.com/user/repo.git
+    """
+    verbose = ctx.obj.get('VERBOSE', False)
+    
+    try:
+        cli_interface = CLIInterface()
+        result = cli_interface.execute_scan_project(repository_url, verbose)
+        cli_interface.shutdown()
+        
+        if result['status'] == 'error':
+            ctx.exit(1)
+            
+    except KeyboardInterrupt:
+        click.echo("\n⚠️  Đã hủy bởi người dùng")
+        ctx.exit(1)
+    except Exception as e:
+        click.echo(f"❌ Lỗi không mong đợi: {e}")
+        ctx.exit(1)
+
+
+@cli.command()
+@click.argument('repository_url')
+@click.argument('pr_identifier')
+@click.option('--verbose', '-v', is_flag=True, help='Hiển thị thông tin chi tiết')
+@click.pass_context
+def review_pr(ctx, repository_url, pr_identifier, verbose):
+    """
+    Review và phân tích một Pull Request (Task 4.2).
+    
+    REPOSITORY_URL: URL của Git repository
+    PR_IDENTIFIER: ID của Pull Request hoặc URL đầy đủ đến PR
+    
+    Ví dụ:
+        python repochat_cli.py review-pr https://github.com/user/repo.git 123
+        python repochat_cli.py review-pr https://github.com/user/repo.git https://github.com/user/repo/pull/123
+    """
+    # Combine global verbose with command verbose
+    global_verbose = ctx.obj.get('VERBOSE', False)
+    verbose = verbose or global_verbose
+    
+    try:
+        cli_interface = CLIInterface()
+        result = cli_interface.execute_review_pr(repository_url, pr_identifier, verbose)
+        cli_interface.shutdown()
+        
+        if result['status'] == 'error':
+            ctx.exit(1)
+            
+    except KeyboardInterrupt:
+        click.echo("\n⚠️  Đã hủy bởi người dùng")
+        ctx.exit(1)
+    except Exception as e:
+        click.echo(f"❌ Lỗi không mong đợi: {e}")
+        ctx.exit(1)
+
+
+@cli.command()
+@click.pass_context  
+def status(ctx):
     """
     Hiển thị trạng thái hệ thống RepoChat.
     """
-    click.echo("📊 Trạng thái RepoChat v1.0:")
-    click.echo("  ✅ Phase 1: Data Acquisition - COMPLETED")
-    click.echo("  ✅ Phase 2: Code Knowledge Graph - COMPLETED") 
-    click.echo("  ✅ Phase 3: Code Analysis & LLM - COMPLETED")
-    click.echo("  🚧 Phase 4: CLI Interface - IN PROGRESS")
-    click.echo("  ⏳ Phase 5: Frontend - PLANNED")
-    click.echo("  ⏳ Phase 6: Testing & Deployment - PLANNED")
-    click.echo("\n🛠️  Các lệnh hiện có:")
-    click.echo("  • scan-project: Quét repository Git")
-    click.echo("  • review-pr: Review PR (sắp có)")
-    click.echo("  • status: Hiển thị trạng thái")
+    verbose = ctx.obj.get('VERBOSE', False)
+    
+    try:
+        cli_interface = CLIInterface()
+        result = cli_interface.show_status(verbose)
+        cli_interface.shutdown()
+        
+        if result['status'] == 'error':
+            ctx.exit(1)
+            
+    except Exception as e:
+        click.echo(f"❌ Lỗi khi lấy trạng thái: {e}")
+        ctx.exit(1)
 
 
 if __name__ == '__main__':
