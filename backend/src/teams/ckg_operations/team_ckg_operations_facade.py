@@ -306,7 +306,7 @@ class TeamCKGOperationsFacade:
         
         try:
             if self.neo4j_connection.is_connected():
-                self.neo4j_connection.close()
+                self.neo4j_connection.disconnect()
                 self.logger.info("Neo4j connection closed")
         except Exception as e:
             self.logger.warning(f"Error closing Neo4j connection: {e}")
