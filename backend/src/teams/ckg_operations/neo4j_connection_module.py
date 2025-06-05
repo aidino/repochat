@@ -240,6 +240,20 @@ class Neo4jConnectionModule:
         """
         return self._is_connected and self._driver is not None
     
+    def test_connection(self) -> bool:
+        """
+        Test Neo4j connection by connecting and executing a simple query.
+        
+        Returns:
+            bool: True if connection test successful, False otherwise
+        """
+        if not self.is_connected():
+            return self.connect()
+        
+        # If already connected, verify with health check
+        health = self.health_check()
+        return health.get('database_accessible', False)
+    
     def health_check(self) -> Dict[str, Any]:
         """
         Perform health check on Neo4j connection.

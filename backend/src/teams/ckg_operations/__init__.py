@@ -21,11 +21,11 @@ Phase 2 Implementation Status:
 ✅ Task 2.1: Neo4jConnectionModule - COMPLETED
 ✅ Task 2.2: CodeParserCoordinatorModule - COMPLETED
 ✅ Task 2.3: Java Parser - COMPLETED
+✅ Task 2.6: ASTtoCKGBuilderModule (nodes) - COMPLETED
+✅ Task 2.7: ASTtoCKGBuilderModule (relationships) - COMPLETED
+✅ Task 2.8: CKGQueryInterfaceModule - COMPLETED
 ⏳ Task 2.4: Python Parser - TODO
 ⏳ Task 2.5: Kotlin/Dart Parser - TODO
-⏳ Task 2.6: ASTtoCKGBuilderModule (nodes) - TODO
-⏳ Task 2.7: ASTtoCKGBuilderModule (relationships) - TODO
-⏳ Task 2.8: CKGQueryInterfaceModule - TODO
 ⏳ Task 2.9: Orchestrator integration - TODO
 """
 
@@ -58,6 +58,15 @@ except ImportError:
     JavaParser = None
     _JAVA_PARSER_AVAILABLE = False
 
+# Import CKG builder modules if available
+try:
+    from .ast_to_ckg_builder_module import ASTtoCKGBuilderModule, CKGQueryInterfaceModule
+    _CKG_BUILDER_AVAILABLE = True
+except ImportError:
+    ASTtoCKGBuilderModule = None
+    CKGQueryInterfaceModule = None
+    _CKG_BUILDER_AVAILABLE = False
+
 # Export public interface
 __all__ = [
     'Neo4jConnectionModule',
@@ -74,12 +83,13 @@ __all__ = [
     'LanguageParseResult',
     'CoordinatorParseResult',
     'CodeEntityType',
-    'VisibilityModifier'
+    'VisibilityModifier',
     # Real parsers (available if dependencies installed)
     'JavaParser',  # Available if javalang is installed
+    # CKG Builder modules (available if dependencies installed)
+    'ASTtoCKGBuilderModule',  # Available if Neo4j dependencies installed
+    'CKGQueryInterfaceModule',  # Available if Neo4j dependencies installed
     # Future exports:
-    # 'ASTtoCKGBuilderModule', 
-    # 'CKGQueryInterfaceModule',
     # 'PythonParser',
     # 'KotlinParser',
     # 'DartParser'
