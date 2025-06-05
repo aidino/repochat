@@ -1,0 +1,53 @@
+# RepoChat Environment Configuration Example
+# Copy this content to a file named ".env" and update the values
+
+# =============================================================================
+# OPENAI CONFIGURATION (REQUIRED FOR LLM TESTING)
+# =============================================================================
+# Get your API key from: https://platform.openai.com/api-keys
+OPENAI_API_KEY=sk-your-actual-openai-api-key-here
+
+# Optional: Organization ID if you have one
+OPENAI_ORG_ID=org-your-org-id-here
+
+# Model configuration
+OPENAI_MODEL=gpt-4
+OPENAI_MAX_TOKENS=4000
+OPENAI_TEMPERATURE=0.1
+
+# =============================================================================
+# NEO4J CONFIGURATION
+# =============================================================================
+NEO4J_URI=bolt://localhost:7687
+NEO4J_USERNAME=neo4j
+NEO4J_PASSWORD=repochat123
+NEO4J_DATABASE=repochat
+
+# =============================================================================
+# GIT CONFIGURATION (OPTIONAL)
+# =============================================================================
+# For private repositories (optional)
+GITHUB_TOKEN=ghp_your-github-token-here
+
+# Git user info
+GIT_USERNAME=your-github-username
+GIT_EMAIL=your-email@example.com
+
+# =============================================================================
+# TESTING CONFIGURATION
+# =============================================================================
+# Test repositories
+TEST_REPO_URL=https://github.com/spring-projects/spring-petclinic.git
+TEST_REPO_SMALL=https://github.com/octocat/Hello-World.git
+TEST_REPO_PYTHON=https://github.com/pallets/flask.git
+TEST_REPO_MULTI=https://github.com/microsoft/vscode.git
+
+# Logging
+LOG_LEVEL=DEBUG
+LOG_FILE=logs/repochat_test.log
+
+# Performance settings
+GIT_CLONE_TIMEOUT=300
+PARSING_TIMEOUT=600
+LLM_REQUEST_TIMEOUT=60
+NEO4J_QUERY_TIMEOUT=30 
