@@ -24,9 +24,9 @@ Phase 2 Implementation Status:
 ✅ Task 2.6: ASTtoCKGBuilderModule (nodes) - COMPLETED
 ✅ Task 2.7: ASTtoCKGBuilderModule (relationships) - COMPLETED
 ✅ Task 2.8: CKGQueryInterfaceModule - COMPLETED
+✅ Task 2.9: Orchestrator integration - COMPLETED
 ⏳ Task 2.4: Python Parser - TODO
 ⏳ Task 2.5: Kotlin/Dart Parser - TODO
-⏳ Task 2.9: Orchestrator integration - TODO
 """
 
 # Import implemented modules
@@ -67,6 +67,15 @@ except ImportError:
     CKGQueryInterfaceModule = None
     _CKG_BUILDER_AVAILABLE = False
 
+# Import facade if available
+try:
+    from .team_ckg_operations_facade import TeamCKGOperationsFacade, CKGOperationResult
+    _FACADE_AVAILABLE = True
+except ImportError:
+    TeamCKGOperationsFacade = None
+    CKGOperationResult = None
+    _FACADE_AVAILABLE = False
+
 # Export public interface
 __all__ = [
     'Neo4jConnectionModule',
@@ -89,6 +98,9 @@ __all__ = [
     # CKG Builder modules (available if dependencies installed)
     'ASTtoCKGBuilderModule',  # Available if Neo4j dependencies installed
     'CKGQueryInterfaceModule',  # Available if Neo4j dependencies installed
+    # Facade for Orchestrator integration (Task 2.9)
+    'TeamCKGOperationsFacade',  # Main facade for orchestrator integration
+    'CKGOperationResult',  # Result object for facade operations
     # Future exports:
     # 'PythonParser',
     # 'KotlinParser',

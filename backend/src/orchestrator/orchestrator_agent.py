@@ -21,6 +21,7 @@ from shared.utils.logging_config import (
 from shared.models.task_definition import TaskDefinition
 from shared.models.project_data_context import ProjectDataContext
 from teams.data_acquisition import GitOperationsModule, LanguageIdentifierModule, DataPreparationModule, PATHandlerModule
+from teams.ckg_operations import TeamCKGOperationsFacade, CKGOperationResult
 
 
 class OrchestratorAgent:
@@ -120,6 +121,16 @@ class OrchestratorAgent:
                 }
             })
             
+            # Initialize TEAM CKG Operations (Task 2.9)
+            self.logger.debug("Initializing TEAM CKG Operations...")
+            self.ckg_operations = TeamCKGOperationsFacade()
+            self.logger.info("TEAM CKG Operations initialized successfully", extra={
+                'extra_data': {
+                    'ckg_operations_ready': self.ckg_operations.is_ready(),
+                    'component': 'TeamCKGOperationsFacade'
+                }
+            })
+            
             # Future phases will add:
             # - LangGraph workflow engine setup
             # - A2A protocol initialization  
@@ -140,7 +151,8 @@ class OrchestratorAgent:
                         'GitOperationsModule',
                         'LanguageIdentifierModule',
                         'DataPreparationModule',
-                        'PATHandlerModule'
+                        'PATHandlerModule',
+                        'TeamCKGOperationsFacade'
                     ]
                 }
             })
@@ -625,6 +637,139 @@ class OrchestratorAgent:
             )
             raise
     
+    def handle_scan_project_with_ckg_task(self, task_definition: TaskDefinition) -> tuple[ProjectDataContext, CKGOperationResult]:
+        """
+        Handle scan project task with CKG building according to Task 2.9 requirements.
+        
+        This method implements the complete workflow:
+        1. Execute data acquisition (existing handle_scan_project_task)
+        2. Pass ProjectDataContext to TEAM CKG Operations
+        3. Build Code Knowledge Graph
+        4. Return both data context and CKG operation results
+        
+        Args:
+            task_definition: TaskDefinition with repository_url
+            
+        Returns:
+            Tuple of (ProjectDataContext, CKGOperationResult)
+            
+        Raises:
+            RuntimeError: If orchestrator is not initialized
+            Exception: If any step in the workflow fails
+        """
+        start_time = time.time()
+        log_function_entry(
+            self.logger,
+            "handle_scan_project_with_ckg_task",
+            repository_url=task_definition.repository_url,
+            task_id=task_definition.task_id
+        )
+        
+        self.logger.info(f"Starting full scan + CKG workflow for: {task_definition.repository_url}")
+        
+        try:
+            # Step 1: Execute data acquisition workflow
+            self.logger.info("Phase 1: Data Acquisition")
+            project_data_context = self.handle_scan_project_task(task_definition)
+            
+            self.logger.info("Data acquisition completed successfully", extra={
+                'extra_data': {
+                    'cloned_path': project_data_context.cloned_code_path,
+                    'detected_languages': project_data_context.detected_languages,
+                    'language_count': project_data_context.language_count
+                }
+            })
+            
+            # Step 2: Execute CKG operations workflow (Task 2.9)
+            self.logger.info("Phase 2: CKG Operations")
+            ckg_start_time = time.time()
+            
+            # Generate project name from repository
+            import os
+            project_name = os.path.basename(project_data_context.cloned_code_path)
+            
+            # Process with TEAM CKG Operations
+            ckg_result = self.ckg_operations.process_project_data_context(
+                project_data_context,
+                project_name
+            )
+            
+            ckg_duration = time.time() - ckg_start_time
+            
+            if ckg_result.success:
+                self.logger.info("CKG Operations completed successfully", extra={
+                    'extra_data': {
+                        'ckg_duration_ms': ckg_duration * 1000,
+                        'nodes_created': ckg_result.nodes_created,
+                        'relationships_created': ckg_result.relationships_created,
+                        'files_processed': ckg_result.files_processed
+                    }
+                })
+            else:
+                self.logger.warning("CKG Operations completed with errors", extra={
+                    'extra_data': {
+                        'ckg_duration_ms': ckg_duration * 1000,
+                        'errors': ckg_result.errors,
+                        'warnings': ckg_result.warnings
+                    }
+                })
+            
+            total_duration = time.time() - start_time
+            
+            self.logger.info("Complete scan + CKG workflow finished", extra={
+                'extra_data': {
+                    'repository_url': task_definition.repository_url,
+                    'total_duration_ms': total_duration * 1000,
+                    'data_acquisition_success': True,
+                    'ckg_operations_success': ckg_result.success,
+                    'overall_success': ckg_result.success,
+                    'final_statistics': {
+                        'languages_detected': len(project_data_context.detected_languages),
+                        'files_parsed': ckg_result.files_parsed,
+                        'entities_found': ckg_result.entities_found,
+                        'nodes_created': ckg_result.nodes_created,
+                        'relationships_created': ckg_result.relationships_created
+                    }
+                }
+            })
+            
+            log_performance_metric(
+                self.logger,
+                "full_scan_ckg_workflow_duration",
+                total_duration * 1000,
+                "ms",
+                repository_url=task_definition.repository_url,
+                ckg_success=ckg_result.success
+            )
+            
+            log_function_exit(
+                self.logger,
+                "handle_scan_project_with_ckg_task",
+                result="success",
+                execution_time=total_duration
+            )
+            
+            return project_data_context, ckg_result
+            
+        except Exception as e:
+            total_duration = time.time() - start_time
+            error_msg = f"Error in full scan + CKG workflow: {e}"
+            self.logger.error(error_msg, exc_info=True, extra={
+                'extra_data': {
+                    'repository_url': task_definition.repository_url,
+                    'error_type': type(e).__name__,
+                    'execution_time_ms': total_duration * 1000
+                }
+            })
+            
+            log_function_exit(
+                self.logger,
+                "handle_scan_project_with_ckg_task",
+                result="error",
+                execution_time=total_duration
+            )
+            raise
+    
     def get_task_status(self, execution_id: str) -> Optional[dict]:
         """
         Get the status of a task execution.
@@ -680,6 +825,15 @@ class OrchestratorAgent:
     def shutdown(self) -> None:
         """Gracefully shutdown the orchestrator agent."""
         self.logger.info(f"Shutting down Orchestrator Agent {self.agent_id}")
+        
+        # Shutdown TEAM CKG Operations (Task 2.9)
+        try:
+            if hasattr(self, 'ckg_operations') and self.ckg_operations:
+                self.logger.debug("Shutting down TEAM CKG Operations")
+                self.ckg_operations.shutdown()
+                self.logger.info("TEAM CKG Operations shutdown completed")
+        except Exception as e:
+            self.logger.warning(f"Error shutting down CKG Operations: {e}")
         
         # Log any active tasks
         if self._active_tasks:
