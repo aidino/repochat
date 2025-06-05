@@ -17,8 +17,12 @@ from typing import Dict, List, Any
 import time
 import uuid
 
-from src.teams.data_acquisition.data_preparation_module import DataPreparationModule
-from src.shared.models.project_data_context import ProjectDataContext
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
+
+from teams.data_acquisition.data_preparation_module import DataPreparationModule
+from shared.models.project_data_context import ProjectDataContext
 
 
 class TestDataPreparationModule:

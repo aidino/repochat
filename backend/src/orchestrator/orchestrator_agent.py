@@ -466,6 +466,9 @@ class OrchestratorAgent:
         
         self.logger.info(f"Starting scan project task for: {task_definition.repository_url}")
         
+        # Update statistics tracking
+        self._stats['total_tasks_handled'] += 1
+        
         # Validation
         if not self._is_initialized:
             error_msg = "Orchestrator Agent is not initialized"
@@ -576,6 +579,9 @@ class OrchestratorAgent:
                 }
             })
             
+            # Update successful task counter
+            self._stats['successful_tasks'] += 1
+            
             log_performance_metric(
                 self.logger,
                 "scan_project_task_duration",
@@ -598,6 +604,9 @@ class OrchestratorAgent:
             # Clear PAT on error for security
             if 'pat' in locals() and pat:
                 self.pat_handler.clear_pat_cache()
+                
+            # Update failed task counter
+            self._stats['failed_tasks'] += 1
                 
             error_msg = f"Error in scan project task: {e}"
             self.logger.error(error_msg, exc_info=True, extra={

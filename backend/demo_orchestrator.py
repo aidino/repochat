@@ -34,7 +34,7 @@ def main():
         # Test 2: Create TaskDefinition
         print("2. Creating TaskDefinition...")
         task_def = TaskDefinition(
-            repository_url="https://github.com/example/test-repo.git"
+            repository_url="https://github.com/aidino/repochat.git"
         )
         print(f"   TaskDefinition: {task_def}")
         print()
