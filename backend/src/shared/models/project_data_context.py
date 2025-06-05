@@ -8,7 +8,50 @@ containing cloned repository path and detected programming languages.
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 from typing import List, Optional, Dict, Any
 from datetime import datetime
+from dataclasses import dataclass
 import os
+
+
+@dataclass
+class PRDiffInfo:
+    """
+    Information về PR diff cho Task 3.7.
+    
+    Chứa thông tin về changes trong một Pull Request,
+    bao gồm file changes và function/method changes.
+    """
+    pr_id: Optional[str] = None
+    """PR ID hoặc number"""
+    
+    pr_url: Optional[str] = None
+    """URL của PR (nếu có)"""
+    
+    base_branch: Optional[str] = None
+    """Branch base của PR"""
+    
+    head_branch: Optional[str] = None  
+    """Branch head của PR"""
+    
+    raw_diff: Optional[str] = None
+    """Raw diff content từ git"""
+    
+    changed_files: List[str] = None
+    """List các file paths đã thay đổi"""
+    
+    file_changes: Dict[str, Dict[str, Any]] = None
+    """Detailed changes per file: {file_path: {added_lines, deleted_lines, chunks}}"""
+    
+    function_changes: List[Dict[str, Any]] = None
+    """List các function/method changes: [{file, function_name, change_type, line_start, line_end}]"""
+    
+    def __post_init__(self):
+        """Initialize default values after dataclass creation."""
+        if self.changed_files is None:
+            self.changed_files = []
+        if self.file_changes is None:
+            self.file_changes = {}
+        if self.function_changes is None:
+            self.function_changes = []
 
 
 class ProjectDataContext(BaseModel):
@@ -63,6 +106,10 @@ class ProjectDataContext(BaseModel):
     acquisition_duration_ms: Optional[float] = None
     """Duration of the data acquisition phase in milliseconds"""
     
+    # Task 3.7: PR Diff Information
+    pr_diff_info: Optional[PRDiffInfo] = None
+    """PR diff information for impact analysis (Task 3.7)"""
+    
     @field_validator('cloned_code_path')
     @classmethod
     def validate_cloned_path(cls, v):
@@ -115,6 +162,22 @@ class ProjectDataContext(BaseModel):
     def has_language(self, language: str) -> bool:
         """Check if a specific language was detected"""
         return language.lower().strip() in self.detected_languages
+    
+    def has_pr_diff(self) -> bool:
+        """Check if PR diff information is available"""
+        return self.pr_diff_info is not None
+    
+    def get_changed_files(self) -> List[str]:
+        """Get list of changed files from PR diff"""
+        if self.pr_diff_info:
+            return self.pr_diff_info.changed_files
+        return []
+    
+    def get_function_changes(self) -> List[Dict[str, Any]]:
+        """Get list of function changes from PR diff"""
+        if self.pr_diff_info:
+            return self.pr_diff_info.function_changes
+        return []
     
     def get_summary(self) -> Dict[str, Any]:
         """Get a summary of the project data context"""

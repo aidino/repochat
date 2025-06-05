@@ -17,8 +17,8 @@ import logging
 from typing import List, Dict, Any, Optional, Set, Tuple
 from dataclasses import dataclass
 
-from teams.ckg_operations.neo4j_connection_module import Neo4jConnectionModule
-from teams.ckg_operations.ast_to_ckg_builder_module import CKGQueryInterfaceModule
+from ..ckg_operations.neo4j_connection_module import Neo4jConnectionModule
+from ..ckg_operations.ast_to_ckg_builder_module import CKGQueryInterfaceModule
 from .models import (
     AnalysisFinding, 
     AnalysisFindingType, 

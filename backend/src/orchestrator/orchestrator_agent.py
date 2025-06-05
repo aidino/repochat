@@ -22,6 +22,7 @@ from shared.models.task_definition import TaskDefinition
 from shared.models.project_data_context import ProjectDataContext
 from teams.data_acquisition import GitOperationsModule, LanguageIdentifierModule, DataPreparationModule, PATHandlerModule
 from teams.ckg_operations import TeamCKGOperationsFacade, CKGOperationResult
+from teams.llm_services import TeamLLMServices, LLMServiceRequest, LLMServiceResponse
 
 
 class OrchestratorAgent:
@@ -131,6 +132,16 @@ class OrchestratorAgent:
                 }
             })
             
+            # Initialize TEAM LLM Services (Task 3.6)
+            self.logger.debug("Initializing TEAM LLM Services...")
+            self.llm_services = TeamLLMServices()
+            self.logger.info("TEAM LLM Services initialized successfully", extra={
+                'extra_data': {
+                    'llm_services_status': self.llm_services.get_status(),
+                    'component': 'TeamLLMServices'
+                }
+            })
+            
             # Future phases will add:
             # - LangGraph workflow engine setup
             # - A2A protocol initialization  
@@ -152,7 +163,8 @@ class OrchestratorAgent:
                         'LanguageIdentifierModule',
                         'DataPreparationModule',
                         'PATHandlerModule',
-                        'TeamCKGOperationsFacade'
+                        'TeamCKGOperationsFacade',
+                        'TeamLLMServices'
                     ]
                 }
             })
@@ -770,6 +782,110 @@ class OrchestratorAgent:
             )
             raise
     
+    def route_llm_request(self, llm_request: LLMServiceRequest) -> LLMServiceResponse:
+        """
+        Định tuyến LLM request từ một TEAM đến TEAM LLM Services.
+        
+        Đây là implementation cho Task 3.6 DoD requirements:
+        - Nhận LLMServiceRequest từ một TEAM (ví dụ: TCA) 
+        - Gọi TEAM LLM Services.process_request()
+        - Trả về LLMServiceResponse cho TEAM đã yêu cầu
+        
+        Args:
+            llm_request: LLMServiceRequest từ team khác
+            
+        Returns:
+            LLMServiceResponse: Response từ LLM service
+            
+        Raises:
+            RuntimeError: If orchestrator is not initialized
+        """
+        start_time = time.time()
+        log_function_entry(
+            self.logger,
+            "route_llm_request", 
+            prompt_id=llm_request.prompt_id,
+            user_id=llm_request.user_id,
+            request_id=llm_request.request_id
+        )
+        
+        if not self._is_initialized:
+            error_msg = "Orchestrator not initialized"
+            self.logger.error(error_msg)
+            raise RuntimeError(error_msg)
+        
+        self.logger.info(f"Routing LLM request from user_id='{llm_request.user_id}' to TEAM LLM Services", extra={
+            'extra_data': {
+                'prompt_id': llm_request.prompt_id,
+                'request_id': llm_request.request_id,
+                'context_data_keys': list(llm_request.context_data.keys()) if llm_request.context_data else [],
+                'llm_model': llm_request.llm_config.model if llm_request.llm_config else 'default'
+            }
+        })
+        
+        try:
+            # Gọi TEAM LLM Services để xử lý request
+            llm_response = self.llm_services.process_request(llm_request)
+            
+            routing_time = time.time() - start_time
+            
+            if llm_response.status.value == "SUCCESS":
+                self.logger.info("LLM request routed successfully", extra={
+                    'extra_data': {
+                        'request_id': llm_request.request_id,
+                        'response_status': llm_response.status.value,
+                        'routing_time_ms': routing_time * 1000,
+                        'response_length': len(llm_response.response_text) if llm_response.response_text else 0,
+                        'processing_time': llm_response.metadata.get('processing_time', 0) if llm_response.metadata else 0
+                    }
+                })
+            else:
+                self.logger.warning("LLM request failed", extra={
+                    'extra_data': {
+                        'request_id': llm_request.request_id,
+                        'response_status': llm_response.status.value,
+                        'error_message': llm_response.error_message,
+                        'routing_time_ms': routing_time * 1000
+                    }
+                })
+            
+            log_performance_metric(
+                self.logger,
+                "llm_request_routing_time",
+                routing_time * 1000,
+                "ms",
+                prompt_id=llm_request.prompt_id,
+                success=llm_response.status.value == "SUCCESS"
+            )
+            
+            log_function_exit(
+                self.logger,
+                "route_llm_request",
+                result="success",
+                execution_time=routing_time
+            )
+            
+            return llm_response
+            
+        except Exception as e:
+            routing_time = time.time() - start_time
+            error_msg = f"Error routing LLM request: {e}"
+            self.logger.error(error_msg, exc_info=True, extra={
+                'extra_data': {
+                    'request_id': llm_request.request_id,
+                    'error_type': type(e).__name__,
+                    'routing_time_ms': routing_time * 1000
+                }
+            })
+            
+            log_function_exit(
+                self.logger,
+                "route_llm_request",
+                result="error",
+                execution_time=routing_time
+            )
+            raise
+    
     def get_task_status(self, execution_id: str) -> Optional[dict]:
         """
         Get the status of a task execution.
@@ -834,6 +950,16 @@ class OrchestratorAgent:
                 self.logger.info("TEAM CKG Operations shutdown completed")
         except Exception as e:
             self.logger.warning(f"Error shutting down CKG Operations: {e}")
+        
+        # Shutdown TEAM LLM Services (Task 3.6)
+        try:
+            if hasattr(self, 'llm_services') and self.llm_services:
+                self.logger.debug("Shutting down TEAM LLM Services")
+                # TeamLLMServices doesn't have explicit shutdown method, but log status
+                status = self.llm_services.get_status()
+                self.logger.info(f"TEAM LLM Services shutdown initiated: {status}")
+        except Exception as e:
+            self.logger.warning(f"Error shutting down LLM Services: {e}")
         
         # Log any active tasks
         if self._active_tasks:

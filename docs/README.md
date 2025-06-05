@@ -233,3 +233,161 @@ All components include:
 - Success/failure tracking
 - Resource usage monitoring
 - Test coverage validation 
+
+# RepoChat Documentation
+
+This directory contains comprehensive documentation for the RepoChat system covering Phase 1-3 implementation.
+
+## 📚 Phase 1-3 Complete Documentation
+
+### 🎯 **NEW** - Complete Phase 1-3 Documentation
+- [**Architecture Overview Phase 1-3**](architecture_overview_phase_1_3.md) - 🔥 **Comprehensive system architecture overview**
+- [**Data Flow Architecture Phase 1-3**](data_flow_architecture_phase_1_3.md) - 🔥 **Complete data flow documentation**  
+- [**Sequence Diagrams Phase 1-3**](sequence_diagrams_phase_1_3.md) - 🔥 **Detailed sequence diagrams for all workflows**
+
+### 📋 Legacy Documentation (Phase 1-2)
+- [Phase 1 Data Flow Analysis](PHASE1_DATA_FLOW_ANALYSIS.md) - Detailed data flow analysis for Phase 1 components
+- [Phase 1 Detailed Sequence Diagrams](PHASE1_DETAILED_SEQUENCE_DIAGRAMS.md) - Comprehensive sequence diagrams for Phase 1 workflows
+- [Phase 1 Quick Reference](PHASE1_QUICK_REFERENCE.md) - Quick reference guide for Phase 1 components and workflows
+- [Data Flow Phase 1-2](DATAFLOW_PHASE_1_2.md) - Data flow documentation for Phase 1 and 2
+- [Sequence Diagrams Phase 1-2](SEQUENCE_DIAGRAM_PHASE_1_2.md) - Sequence diagrams for Phase 1 and 2 interactions
+
+### 🛠️ Development Documentation
+- [Docker Development Guide](DOCKER_DEVELOPMENT.md) - Comprehensive guide for Docker-based development environment
+
+## 🚀 Quick Start Navigation
+
+### For New Team Members
+1. **START HERE**: [Architecture Overview Phase 1-3](architecture_overview_phase_1_3.md) - Get the big picture
+2. **Understand Data Flow**: [Data Flow Architecture Phase 1-3](data_flow_architecture_phase_1_3.md) - Learn how data moves through the system
+3. **See Interactions**: [Sequence Diagrams Phase 1-3](sequence_diagrams_phase_1_3.md) - Understand component interactions
+4. **Setup Environment**: [Docker Development Guide](DOCKER_DEVELOPMENT.md) - Get your development environment ready
+
+### For Developers
+1. 📖 [Architecture Overview Phase 1-3](architecture_overview_phase_1_3.md) - Understand system design principles
+2. 🔄 [Data Flow Architecture Phase 1-3](data_flow_architecture_phase_1_3.md) - Learn data transformation patterns
+3. ⚡ [Sequence Diagrams Phase 1-3](sequence_diagrams_phase_1_3.md) - Master component communication patterns
+4. 🐳 [Docker Development Guide](DOCKER_DEVELOPMENT.md) - Setup development environment
+
+### For Architects & Tech Leads
+1. 🏗️ [Architecture Overview Phase 1-3](architecture_overview_phase_1_3.md) - Full system architecture
+2. 📊 [Data Flow Architecture Phase 1-3](data_flow_architecture_phase_1_3.md) - Data pipeline architecture
+3. 🔄 [Sequence Diagrams Phase 1-3](sequence_diagrams_phase_1_3.md) - Integration patterns
+4. 📈 Review performance, security, and scalability sections
+
+### For Product Managers
+1. 🎯 [Architecture Overview Phase 1-3](architecture_overview_phase_1_3.md) - System capabilities và roadmap
+2. 📋 [Data Flow Architecture Phase 1-3](data_flow_architecture_phase_1_3.md) - Feature data requirements
+3. 📅 Review Phase 4-6 roadmap in architecture overview
+
+## 📋 Documentation Coverage Matrix
+
+| Document | Phase 1 | Phase 2 | Phase 3 | Data Flow | Sequence | Architecture |
+|----------|---------|---------|---------|-----------|----------|-------------|
+| **Architecture Overview Phase 1-3** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Data Flow Architecture Phase 1-3** | ✅ | ✅ | ✅ | ✅ | ➖ | ✅ |
+| **Sequence Diagrams Phase 1-3** | ✅ | ✅ | ✅ | ➖ | ✅ | ✅ |
+
+## 🎯 Key System Components Documented
+
+### Phase 1: Data Acquisition & CKG Operations
+- ✅ GitOperationsModule với PR diff extraction
+- ✅ LanguageIdentifierModule với multi-language support
+- ✅ CodeParserCoordinatorModule với parallel parsing
+- ✅ Multi-language parsers (Java, Python, Kotlin, Dart)
+- ✅ ASTtoCKGBuilderModule với Neo4j integration
+- ✅ CKGQueryInterfaceModule với graph queries
+
+### Phase 2: Code Analysis & LLM Services
+- ✅ ArchitecturalAnalyzerModule với circular dependency detection
+- ✅ PRImpactAnalyzerModule với change impact analysis
+- ✅ LLMAnalysisSupportModule với prompt engineering
+- ✅ StaticAnalysisIntegratorModule (placeholder với comprehensive design)
+- ✅ LLMGatewayModule với routing và rate limiting
+- ✅ TeamLLMServices với provider abstraction
+
+### Phase 3: Orchestrator Integration
+- ✅ OrchestratorAgent với task coordination
+- ✅ TaskDefinition với standardized specifications
+- ✅ Complete TEAM integration với all components
+- ✅ Error handling và recovery mechanisms
+- ✅ Performance monitoring và observability
+
+## 🛡️ Production Readiness Features
+
+### Security
+- 🔐 Authentication & Authorization patterns
+- 🛡️ Data encryption strategies
+- 🔒 API security measures
+- 📋 Audit logging requirements
+
+### Performance
+- ⚡ Caching strategies (multi-level)
+- 🔄 Parallel processing patterns
+- 📊 Performance monitoring
+- 📈 Scalability considerations
+
+### Reliability
+- 🔄 Circuit breaker patterns
+- 🔁 Retry mechanisms với exponential backoff
+- 🛡️ Graceful degradation strategies
+- 📝 Comprehensive error handling
+
+## 📊 Implementation Status
+
+| Phase | Components | Status | Test Coverage | Documentation |
+|-------|------------|--------|---------------|---------------|
+| **Phase 1** | 8/8 modules | ✅ Complete | 100% | ✅ Complete |
+| **Phase 2** | 8/8 modules | ✅ Complete | 100% | ✅ Complete |
+| **Phase 3** | 3/3 modules | ✅ Complete | 100% | ✅ Complete |
+| **Integration** | All phases | ✅ Verified | 100% | ✅ Complete |
+
+## 🔄 Documentation Update Process
+
+When adding or updating documentation:
+1. **Follow Template Structure**: Use existing documents as templates
+2. **Include Mermaid Diagrams**: Visual representations are required
+3. **Cross-Reference**: Link to related documents
+4. **Version Control**: Update version information
+5. **Test Examples**: Include working code examples
+6. **Update README**: Add new documents to this navigation
+
+## 📅 Documentation Roadmap
+
+### Phase 4: CLI Development (Next)
+- Command-line interface documentation
+- Configuration management guides
+- Integration testing documentation
+
+### Phase 5: Web Interface (Future)
+- Frontend architecture documentation
+- API documentation
+- User experience guides
+
+### Phase 6: Advanced Features (Future)
+- Machine learning integration docs
+- Enterprise feature documentation
+- API ecosystem documentation
+
+## 📋 Document Status Summary
+
+| Document | Status | Phase Coverage | Last Updated | Quality |
+|----------|--------|----------------|--------------|---------|
+| **Architecture Overview Phase 1-3** | ✅ Production Ready | 1-3 Complete | 2024-12-28 | 🔥 Excellent |
+| **Data Flow Architecture Phase 1-3** | ✅ Production Ready | 1-3 Complete | 2024-12-28 | 🔥 Excellent |
+| **Sequence Diagrams Phase 1-3** | ✅ Production Ready | 1-3 Complete | 2024-12-28 | 🔥 Excellent |
+| Phase 1 Legacy Docs | ✅ Complete | Phase 1 | 2024-12-27 | ✅ Good |
+| Phase 1-2 Legacy Docs | ✅ Complete | Phase 1-2 | 2024-12-27 | ✅ Good |
+| Docker Development Guide | ✅ Complete | Development | 2024-12-27 | ✅ Good |
+
+---
+
+## 🤝 Contributing
+
+For questions, suggestions, or contributions to documentation:
+- Create issues for documentation requests
+- Submit pull requests for improvements
+- Follow our documentation standards
+- Test all code examples before submitting
+
+**Current Focus**: Phase 4 CLI development documentation preparation 

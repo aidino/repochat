@@ -187,6 +187,7 @@ class PromptTemplate(BaseModel):
     template_text: str = Field(..., description="Template string with placeholders")
     required_variables: List[str] = Field(default_factory=list, description="Required template variables")
     optional_variables: List[str] = Field(default_factory=list, description="Optional template variables")
+    default_values: Dict[str, Any] = Field(default_factory=dict, description="Default values for optional variables")
     
     # Template metadata
     category: Optional[str] = Field(None, description="Template category")

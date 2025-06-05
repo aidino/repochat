@@ -10,7 +10,8 @@ import os
 import tempfile
 import shutil
 import time
-from typing import Optional, Dict, Any
+import re
+from typing import Optional, Dict, Any, List
 from pathlib import Path
 from urllib.parse import urlparse
 import random
@@ -24,6 +25,7 @@ from shared.utils.logging_config import (
     log_function_exit,
     log_performance_metric
 )
+from shared.models.project_data_context import PRDiffInfo
 
 
 class GitOperationsModule:
@@ -532,4 +534,369 @@ class GitOperationsModule:
             
         except Exception as e:
             self.logger.error(f"Failed to get repository stats: {e}", exc_info=True)
-            return {'error': str(e)} 
+            return {'error': str(e)}
+    
+    # Task 3.7: PR Diff Extraction Methods
+    
+    def extract_pr_diff(self, repository_path: str, pr_id: Optional[str] = None, 
+                       base_branch: str = "main", head_branch: Optional[str] = None,
+                       diff_file_path: Optional[str] = None) -> PRDiffInfo:
+        """
+        Extract PR diff information cho Task 3.7.
+        
+        Args:
+            repository_path: Path to cloned repository
+            pr_id: PR ID hoặc number (for metadata)
+            base_branch: Base branch name (default: main)
+            head_branch: Head branch name (nếu None sẽ dùng current branch)
+            diff_file_path: Path to diff file (alternative to Git diff)
+            
+        Returns:
+            PRDiffInfo: Structured diff information
+        """
+        start_time = time.time()
+        log_function_entry(
+            self.logger,
+            "extract_pr_diff",
+            repository_path=repository_path,
+            pr_id=pr_id,
+            base_branch=base_branch,
+            head_branch=head_branch
+        )
+        
+        try:
+            # Initialize PRDiffInfo
+            pr_diff_info = PRDiffInfo(
+                pr_id=pr_id,
+                base_branch=base_branch,
+                head_branch=head_branch
+            )
+            
+            if diff_file_path and os.path.exists(diff_file_path):
+                # Option 1: Parse provided diff file
+                self.logger.info(f"Parsing diff from file: {diff_file_path}")
+                pr_diff_info = self._parse_diff_file(diff_file_path, pr_diff_info)
+                
+            else:
+                # Option 2: Extract diff from Git repository
+                self.logger.info(f"Extracting diff from Git repository: {repository_path}")
+                pr_diff_info = self._extract_git_diff(repository_path, pr_diff_info)
+            
+            # Parse function changes từ diff
+            pr_diff_info.function_changes = self._extract_function_changes(pr_diff_info)
+            
+            extraction_time = time.time() - start_time
+            
+            self.logger.info("PR diff extraction completed", extra={
+                'extra_data': {
+                    'pr_id': pr_id,
+                    'changed_files_count': len(pr_diff_info.changed_files),
+                    'function_changes_count': len(pr_diff_info.function_changes),
+                    'extraction_time_ms': extraction_time * 1000,
+                    'base_branch': base_branch,
+                    'head_branch': head_branch
+                }
+            })
+            
+            log_performance_metric(
+                self.logger,
+                "pr_diff_extraction_time",
+                extraction_time * 1000,
+                "ms",
+                pr_id=pr_id,
+                files_count=len(pr_diff_info.changed_files)
+            )
+            
+            log_function_exit(
+                self.logger,
+                "extract_pr_diff",
+                result="success",
+                execution_time=extraction_time
+            )
+            
+            return pr_diff_info
+            
+        except Exception as e:
+            error_msg = f"Error extracting PR diff: {e}"
+            self.logger.error(error_msg, exc_info=True, extra={
+                'extra_data': {
+                    'repository_path': repository_path,
+                    'pr_id': pr_id,
+                    'error_type': type(e).__name__
+                }
+            })
+            
+            log_function_exit(
+                self.logger,
+                "extract_pr_diff",
+                result="error",
+                execution_time=time.time() - start_time
+            )
+            raise
+    
+    def _extract_git_diff(self, repository_path: str, pr_diff_info: PRDiffInfo) -> PRDiffInfo:
+        """
+        Extract diff từ Git repository.
+        
+        Args:
+            repository_path: Path to repository
+            pr_diff_info: PRDiffInfo object to populate
+            
+        Returns:
+            Updated PRDiffInfo object
+        """
+        try:
+            repo = Repo(repository_path)
+            
+            # Determine head branch
+            if not pr_diff_info.head_branch:
+                pr_diff_info.head_branch = repo.active_branch.name
+            
+            # Get diff between base and head
+            base_commit = repo.commit(pr_diff_info.base_branch)
+            head_commit = repo.commit(pr_diff_info.head_branch)
+            
+            # Get raw diff
+            diff = repo.git.diff(base_commit, head_commit)
+            pr_diff_info.raw_diff = diff
+            
+            # Get changed files
+            changed_items = base_commit.diff(head_commit)
+            pr_diff_info.changed_files = [item.a_path or item.b_path for item in changed_items]
+            
+            # Parse detailed file changes
+            pr_diff_info.file_changes = self._parse_file_changes(changed_items)
+            
+            self.logger.debug(f"Extracted Git diff: {len(pr_diff_info.changed_files)} files changed")
+            
+            return pr_diff_info
+            
+        except Exception as e:
+            self.logger.error(f"Error extracting Git diff: {e}", exc_info=True)
+            # Return empty diff info for graceful handling
+            return pr_diff_info
+    
+    def _parse_diff_file(self, diff_file_path: str, pr_diff_info: PRDiffInfo) -> PRDiffInfo:
+        """
+        Parse diff từ file.
+        
+        Args:
+            diff_file_path: Path to diff file
+            pr_diff_info: PRDiffInfo object to populate
+            
+        Returns:
+            Updated PRDiffInfo object
+        """
+        try:
+            with open(diff_file_path, 'r', encoding='utf-8') as f:
+                diff_content = f.read()
+            
+            pr_diff_info.raw_diff = diff_content
+            
+            # Parse changed files từ diff
+            pr_diff_info.changed_files = self._parse_changed_files_from_diff(diff_content)
+            
+            # Parse file changes
+            pr_diff_info.file_changes = self._parse_file_changes_from_diff(diff_content)
+            
+            self.logger.debug(f"Parsed diff file: {len(pr_diff_info.changed_files)} files changed")
+            
+            return pr_diff_info
+            
+        except Exception as e:
+            self.logger.error(f"Error parsing diff file: {e}", exc_info=True)
+            return pr_diff_info
+    
+    def _parse_changed_files_from_diff(self, diff_content: str) -> List[str]:
+        """
+        Parse changed files từ raw diff content.
+        
+        Args:
+            diff_content: Raw diff content
+            
+        Returns:
+            List of changed file paths
+        """
+        changed_files = []
+        
+        # Pattern for diff headers: "diff --git a/file b/file"
+        file_pattern = r'^diff --git a/(.+?) b/(.+?)$'
+        
+        for line in diff_content.split('\n'):
+            match = re.match(file_pattern, line)
+            if match:
+                # Usually a_path and b_path are same unless renamed
+                file_path = match.group(2)
+                if file_path not in changed_files:
+                    changed_files.append(file_path)
+        
+        return changed_files
+    
+    def _parse_file_changes(self, changed_items) -> Dict[str, Dict[str, Any]]:
+        """
+        Parse detailed file changes từ GitPython diff items.
+        
+        Args:
+            changed_items: GitPython diff items
+            
+        Returns:
+            Dictionary with file change details
+        """
+        file_changes = {}
+        
+        for item in changed_items:
+            file_path = item.a_path or item.b_path
+            
+            change_info = {
+                'change_type': item.change_type,  # A(dded), M(odified), D(eleted), R(enamed)
+                'added_lines': 0,
+                'deleted_lines': 0,
+                'chunks': []
+            }
+            
+            # Try to get line counts
+            try:
+                if item.diff:
+                    diff_text = item.diff.decode('utf-8', errors='ignore')
+                    added, deleted = self._count_diff_lines(diff_text)
+                    change_info['added_lines'] = added
+                    change_info['deleted_lines'] = deleted
+            except Exception as e:
+                self.logger.debug(f"Could not parse diff for {file_path}: {e}")
+            
+            file_changes[file_path] = change_info
+        
+        return file_changes
+    
+    def _parse_file_changes_from_diff(self, diff_content: str) -> Dict[str, Dict[str, Any]]:
+        """
+        Parse file changes từ raw diff content.
+        
+        Args:
+            diff_content: Raw diff content
+            
+        Returns:
+            Dictionary with file change details
+        """
+        file_changes = {}
+        current_file = None
+        
+        for line in diff_content.split('\n'):
+            # Check for file header
+            if line.startswith('diff --git'):
+                match = re.match(r'^diff --git a/(.+?) b/(.+?)$', line)
+                if match:
+                    current_file = match.group(2)
+                    file_changes[current_file] = {
+                        'change_type': 'M',  # Default to modified
+                        'added_lines': 0,
+                        'deleted_lines': 0,
+                        'chunks': []
+                    }
+            
+            elif current_file and line.startswith('+') and not line.startswith('+++'):
+                file_changes[current_file]['added_lines'] += 1
+            elif current_file and line.startswith('-') and not line.startswith('---'):
+                file_changes[current_file]['deleted_lines'] += 1
+        
+        return file_changes
+    
+    def _count_diff_lines(self, diff_text: str) -> tuple:
+        """
+        Count added and deleted lines từ diff text.
+        
+        Args:
+            diff_text: Diff text content
+            
+        Returns:
+            Tuple of (added_lines, deleted_lines)
+        """
+        added = 0
+        deleted = 0
+        
+        for line in diff_text.split('\n'):
+            if line.startswith('+') and not line.startswith('+++'):
+                added += 1
+            elif line.startswith('-') and not line.startswith('---'):
+                deleted += 1
+        
+        return added, deleted
+    
+    def _extract_function_changes(self, pr_diff_info: PRDiffInfo) -> List[Dict[str, Any]]:
+        """
+        Extract function/method changes từ PR diff.
+        
+        Args:
+            pr_diff_info: PRDiffInfo with raw diff
+            
+        Returns:
+            List of function changes
+        """
+        function_changes = []
+        
+        if not pr_diff_info.raw_diff:
+            return function_changes
+        
+        try:
+            # Simple heuristic để tìm function changes
+            # Tìm patterns như "def function_name", "function function_name", "class ClassName" etc.
+            
+            function_patterns = [
+                r'^\+.*def\s+(\w+)\s*\(',     # Python functions  
+                r'^\+.*function\s+(\w+)\s*\(',  # JavaScript functions
+                r'^\+.*class\s+(\w+)\s*[{:]',   # Class definitions
+                r'^\+.*public\s+\w+\s+(\w+)\s*\(',  # Java methods
+                r'^\+.*private\s+\w+\s+(\w+)\s*\(',  # Java methods
+                r'^\+.*protected\s+\w+\s+(\w+)\s*\(',  # Java methods
+            ]
+            
+            current_file = None
+            lines = pr_diff_info.raw_diff.split('\n')
+            
+            for i, line in enumerate(lines):
+                # Track current file
+                if line.startswith('diff --git'):
+                    match = re.match(r'^diff --git a/(.+?) b/(.+?)$', line)
+                    if match:
+                        current_file = match.group(2)
+                
+                # Look for function changes
+                if current_file and line.startswith('+'):
+                    for pattern in function_patterns:
+                        match = re.search(pattern, line)
+                        if match:
+                            function_name = match.group(1)
+                            
+                            function_changes.append({
+                                'file': current_file,
+                                'function_name': function_name,
+                                'change_type': 'added',
+                                'line_number': i + 1,
+                                'line_content': line[1:].strip()  # Remove + prefix
+                            })
+                            break
+                
+                # Look for deleted functions
+                elif current_file and line.startswith('-'):
+                    for pattern in function_patterns:
+                        # Replace + with - for deleted functions
+                        deleted_pattern = pattern.replace('^\\+', '^\\-')
+                        match = re.search(deleted_pattern, line)
+                        if match:
+                            function_name = match.group(1)
+                            
+                            function_changes.append({
+                                'file': current_file,
+                                'function_name': function_name,
+                                'change_type': 'deleted',
+                                'line_number': i + 1,
+                                'line_content': line[1:].strip()  # Remove - prefix
+                            })
+                            break
+            
+            self.logger.debug(f"Extracted {len(function_changes)} function changes")
+            
+        except Exception as e:
+            self.logger.error(f"Error extracting function changes: {e}", exc_info=True)
+        
+        return function_changes
