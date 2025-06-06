@@ -1,20 +1,29 @@
 <template>
   <div class="app-container">
-    <!-- Sidebar Component -->
-    <Sidebar 
-      :currentChatId="currentChatId"
-      :isLoading="isLoading"
-      @new-chat="startNewChat"
-      @open-settings="openSettings"
-      @select-chat="selectChat"
-      @delete-chat="deleteChat"
-      @rename-chat="renameChat"
-      @duplicate-chat="duplicateChat"
-      @export-chat="exportChat"
+    <!-- Settings Screen -->
+    <SettingsScreen 
+      v-if="showSettings"
+      @go-back="closeSettings"
+      @settings-saved="onSettingsSaved"
     />
 
-    <!-- Main Chat Area -->
-    <main class="chat-container">
+    <!-- Main App Layout (when not showing settings) -->
+    <template v-else>
+      <!-- Sidebar Component -->
+      <Sidebar 
+        :currentChatId="currentChatId"
+        :isLoading="isLoading"
+        @new-chat="startNewChat"
+        @open-settings="openSettings"
+        @select-chat="selectChat"
+        @delete-chat="deleteChat"
+        @rename-chat="renameChat"
+        @duplicate-chat="duplicateChat"
+        @export-chat="exportChat"
+      />
+
+      <!-- Main Chat Area -->
+      <main class="chat-container">
       <!-- Chat Header -->
       <header class="chat-header">
         <h2 class="chat-title">{{ currentChatTitle }}</h2>
@@ -88,19 +97,25 @@
         </div>
       </div>
     </main>
+    </template>
   </div>
 </template>
 
 <script>
 import Sidebar from './components/Sidebar.vue'
+import SettingsScreen from './components/SettingsScreen.vue'
 
 export default {
   name: 'App',
   components: {
-    Sidebar
+    Sidebar,
+    SettingsScreen
   },
   data() {
     return {
+      // App state
+      showSettings: false,
+      
       // Chat state
       currentChatId: 1,
       inputMessage: '',
@@ -135,7 +150,8 @@ export default {
     },
     
     openSettings() {
-      alert('Chức năng cài đặt sẽ được triển khai trong Task 5.3!')
+      console.log('Opening settings screen...')
+      this.showSettings = true
     },
     
     selectChat(chatId) {
@@ -169,6 +185,21 @@ export default {
     exportChat(chat) {
       console.log('Export chat requested:', chat)
       // In real app, export chat data
+    },
+    
+    // === Settings Management ===
+    closeSettings() {
+      console.log('Closing settings screen...')
+      this.showSettings = false
+    },
+    
+    onSettingsSaved(settingsData) {
+      console.log('Settings saved in parent app:', settingsData)
+      // Optional: show notification or handle settings update
+      // For now, just close settings automatically after save
+      setTimeout(() => {
+        this.closeSettings()
+      }, 2000)
     },
     
     sendMessage() {
