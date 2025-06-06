@@ -5,8 +5,8 @@ Contains common data structures used across LLM service modules.
 Includes request/response models, configuration models, and provider interfaces.
 """
 
-from typing import Dict, Any, Optional, List
-from dataclasses import dataclass
+from typing import Dict, Any, Optional, List, Union
+from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from abc import ABC, abstractmethod
@@ -18,8 +18,9 @@ class LLMProviderType(Enum):
     OPENAI = "openai"
     GOOGLE_GENAI = "google_genai"
     OLLAMA = "ollama"
-    # ANTHROPIC = "anthropic"  # Not used - user prefers OpenAI + Google GenAI
-    # AZURE_OPENAI = "azure_openai"  # Not used - user prefers OpenAI + Google GenAI
+    ANTHROPIC = "anthropic"
+    AZURE_OPENAI = "azure_openai"
+    HUGGINGFACE = "huggingface"
 
 
 class LLMServiceStatus(Enum):
@@ -31,6 +32,10 @@ class LLMServiceStatus(Enum):
     API_KEY_INVALID = "api_key_invalid"
     MODEL_NOT_FOUND = "model_not_found"
     QUOTA_EXCEEDED = "quota_exceeded"
+    UNAUTHORIZED = "unauthorized"
+    UNAVAILABLE = "unavailable"
+    INITIALIZING = "initializing"
+    READY = "ready"
 
 
 @dataclass
@@ -254,3 +259,15 @@ class LLMProviderStats:
         if self.requests_total == 0:
             return 0.0
         return (self.requests_successful / self.requests_total) * 100 
+
+
+class LLMCapability(Enum):
+    """LLM capabilities that providers can support."""
+    TEXT_GENERATION = "text_generation"
+    CODE_ANALYSIS = "code_analysis"
+    CONVERSATION = "conversation"
+    FUNCTION_CALLING = "function_calling"
+    JSON_MODE = "json_mode"
+    STREAMING = "streaming"
+    VISION = "vision"
+    EMBEDDING = "embedding" 

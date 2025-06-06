@@ -40,6 +40,8 @@ from .models import (
 
 # Provider implementations
 from .openai_provider import OpenAIProvider
+from .google_genai_provider import GoogleGenAIProvider, create_google_genai_config, is_google_genai_available
+from .anthropic_provider import AnthropicProvider, create_anthropic_config, is_anthropic_available
 
 # Factory and management
 from .provider_factory import LLMProviderFactory, LLMProviderManager
@@ -91,6 +93,12 @@ __all__ = [
     
     # Provider implementations
     "OpenAIProvider",
+    "GoogleGenAIProvider",
+    "AnthropicProvider",
+    "create_google_genai_config",
+    "create_anthropic_config",
+    "is_google_genai_available", 
+    "is_anthropic_available",
     
     # Factory and management
     "LLMProviderFactory",

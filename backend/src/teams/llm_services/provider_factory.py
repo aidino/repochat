@@ -19,6 +19,8 @@ from .models import (
 )
 from .openai_provider import OpenAIProvider
 from .ollama_provider import OllamaProvider
+from .google_genai_provider import GoogleGenAIProvider
+from .anthropic_provider import AnthropicProvider
 
 # Mock logging for now
 def get_logger(name, **kwargs):
@@ -38,9 +40,11 @@ class LLMProviderFactory:
     _provider_registry: Dict[LLMProviderType, Type[LLMProviderInterface]] = {
         LLMProviderType.OPENAI: OpenAIProvider,
         LLMProviderType.OLLAMA: OllamaProvider,
+        LLMProviderType.GOOGLE_GENAI: GoogleGenAIProvider,
+        LLMProviderType.ANTHROPIC: AnthropicProvider,
         # Future providers can be added here:
-        # LLMProviderType.GOOGLE_GENAI: GoogleGenAIProvider,
-        # LLMProviderType.ANTHROPIC: AnthropicProvider,
+        # LLMProviderType.AZURE_OPENAI: AzureOpenAIProvider,
+        # LLMProviderType.HUGGINGFACE: HuggingFaceProvider,
     }
     
     # Cache for initialized providers
@@ -134,9 +138,11 @@ class LLMProviderFactory:
         return {
             LLMProviderType.OPENAI: "OpenAI GPT models (GPT-4, GPT-3.5, etc.)",
             LLMProviderType.OLLAMA: "Ollama local models (Llama, Mistral, etc.)",
+            LLMProviderType.GOOGLE_GENAI: "Google Generative AI (Gemini Pro, Ultra, etc.)",
+            LLMProviderType.ANTHROPIC: "Anthropic Claude models (Claude 3 Opus, Sonnet, Haiku)",
             # Future providers:
-            # LLMProviderType.GOOGLE_GENAI: "Google Generative AI (Gemini models)",
-            # LLMProviderType.ANTHROPIC: "Anthropic Claude models",
+            # LLMProviderType.AZURE_OPENAI: "Azure OpenAI Service",
+            # LLMProviderType.HUGGINGFACE: "Hugging Face Inference API",
         }
     
     @classmethod
