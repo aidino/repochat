@@ -75,8 +75,29 @@ from .llm_gateway import (
     explain_code_with_gateway
 )
 
+# Import convenience function từ code analysis
+# Note: Import moved to avoid circular dependency - will be added dynamically
+
 # Setup logging
 logger = logging.getLogger(__name__)
+
+# Dynamic import function to avoid circular dependency
+def create_explain_code_request(code_snippet: str, language: str = "python"):
+    """
+    Convenience function để tạo explain_code request.
+    
+    Args:
+        code_snippet: Đoạn code cần giải thích
+        language: Ngôn ngữ lập trình
+        
+    Returns:
+        LLMServiceRequest: Request đã được tạo
+    """
+    # Import locally to avoid circular dependency
+    from ..code_analysis.llm_analysis_support_module import create_llm_analysis_support
+    
+    module = create_llm_analysis_support()
+    return module.create_explain_code_request(code_snippet, language)
 
 # Export lists for convenient access
 __all__ = [
@@ -131,6 +152,9 @@ __all__ = [
     
     # Task 3.6: TEAM LLM Services Facade
     "TeamLLMServices",
+    
+    # Task 3.5: Convenience functions
+    "create_explain_code_request",
 ]
 
 # Package metadata

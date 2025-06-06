@@ -19,7 +19,11 @@ from typing import Dict, Any, List
 # Add backend to path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from src.teams.llm_services import (
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
+
+from teams.llm_services import (
     # Task 3.4 modules
     PromptFormatterModule, LLMGatewayModule,
     TemplateType, FormattingResult, GatewayResponse,

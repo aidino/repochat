@@ -1,0 +1,37 @@
+{
+  "summary": {
+    "total_time": 0.8272972106933594,
+    "total_tests": 13,
+    "passed_tests": 11,
+    "failed_tests": 2,
+    "success_rate": 84.61538461538461,
+    "assessment": "GOOD",
+    "timestamp": "2025-06-06 14:59:04"
+  },
+  "detailed_results": {
+    "imports": {
+      "shared_models": "\u2705 SUCCESS",
+      "code_analysis": "\u2705 SUCCESS",
+      "llm_services": "\u2705 SUCCESS",
+      "ckg_operations": "\u2705 SUCCESS",
+      "orchestrator": "\u274c FAILED: attempted relative import beyond top-level package"
+    },
+    "functionality": {
+      "architectural_analysis": "\u2705 SUCCESS - All methods available",
+      "llm_analysis_support": "\u2705 SUCCESS - Request creation works",
+      "pr_impact_analysis": "\u2705 SUCCESS - Analysis workflow works",
+      "static_analysis": "\u274c FAILED: ",
+      "llm_services": "\u2705 SUCCESS - Service status: {'team': 'LLM Services', 'facade_ready': True, 'gateway_status': {'gateway_status': 'ready', 'default_provider': 'openai', 'provider_availability': {'openai': False, 'google_genai': False, 'ollama': False, 'anthropic': False, 'azure_openai': False, 'huggingface': False}, 'total_templates': 5, 'available_templates': ['explain_code', 'review_changes', 'suggest_improvements', 'find_issues', 'analyze_function'], 'cache_size': 0, 'stats_enabled': True}, 'gateway_stats': {'total_requests': 0, 'successful_requests': 0, 'failed_requests': 0, 'success_rate': 0.0, 'average_processing_time': 0.0, 'total_processing_time': 0.0, 'provider_usage': {}, 'template_usage': {}, 'error_counts': {}}}"
+    },
+    "integration": {
+      "workflow_simulation": "\u2705 SUCCESS - Components integrate properly",
+      "data_consistency": "\u2705 SUCCESS - Data models consistent",
+      "error_handling": "\u2705 SUCCESS - Error handling works"
+    },
+    "benchmarks": {
+      "architectural_init_ms": 0.43,
+      "llm_request_creation_ms": 0.06,
+      "data_model_creation_ms": 0.03
+    }
+  }
+}
