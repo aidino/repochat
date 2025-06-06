@@ -90,8 +90,8 @@
             class="btn btn-primary send-btn"
             :disabled="!inputMessage.trim() || isLoading"
           >
-            <span v-if="isLoading" class="icon">⏳</span>
-            <span v-else class="icon">📤</span>
+                      <span v-if="isLoading" class="icon">⏳</span>
+          <span v-else class="icon">↗</span>
             {{ isLoading ? 'Đang xử lý...' : 'Gửi' }}
           </button>
         </div>
@@ -482,29 +482,29 @@ export default {
   width: 100%;
   margin-bottom: var(--space-2);
   padding: var(--space-3);
-  background: var(--color-background-secondary);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   cursor: pointer;
   transition: all var(--transition-fast);
-  color: var(--color-text-primary);
+  color: #ffffff;
   text-align: left;
   font-family: var(--font-family-primary);
   font-weight: var(--font-weight-medium);
 }
 
 .example-btn:hover {
-  background: var(--gradient-primary);
-  color: var(--color-text-inverse);
+  background: var(--color-surface);
+  color: #ffffff;
   transform: translateY(-1px);
   box-shadow: var(--shadow-md);
-  border-color: transparent;
+  border-color: var(--color-border-strong);
 }
 
 /* Input Area */
 .input-area {
   padding: var(--space-4) var(--space-6);
-  background: rgba(255, 255, 255, 0.8);
+  background: #2c3e50;
   border-top: 1px solid var(--color-border-subtle);
   backdrop-filter: blur(20px);
   box-shadow: var(--shadow-lg);

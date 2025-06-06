@@ -3,7 +3,7 @@
     <!-- Sidebar Header -->
     <div class="sidebar-header">
       <h1 class="app-title">
-        <span class="app-icon">🤖</span>
+        <span class="app-icon">💬</span>
         RepoChat
       </h1>
       <span class="app-version">v1.0</span>
@@ -16,7 +16,7 @@
         @click="handleNewChat"
         :disabled="isLoading"
       >
-        <span class="icon">➕</span>
+                  <span class="icon">＋</span>
         Chat Mới
       </button>
       
@@ -25,7 +25,7 @@
         @click="handleSettings"
         :disabled="isLoading"
       >
-        <span class="icon">⚙️</span>
+                  <span class="icon">⚙</span>
         Cài Đặt
       </button>
     </div>
@@ -40,7 +40,7 @@
           :disabled="isRefreshing"
           title="Làm mới lịch sử"
         >
-          <span class="icon" :class="{ 'spinning': isRefreshing }">🔄</span>
+          <span class="icon" :class="{ 'spinning': isRefreshing }">↻</span>
         </button>
       </div>
       
@@ -89,21 +89,21 @@
               @click.stop="toggleChatFavorite(chat.id)"
               :title="chat.isFavorite ? 'Bỏ yêu thích' : 'Yêu thích'"
             >
-              <span class="icon">{{ chat.isFavorite ? '⭐' : '☆' }}</span>
+              <span class="icon">{{ chat.isFavorite ? '★' : '☆' }}</span>
             </button>
             <button 
               class="btn btn-icon history-action"
               @click.stop="deleteChat(chat.id)"
               title="Xóa chat"
             >
-              <span class="icon">🗑️</span>
+              <span class="icon">×</span>
             </button>
           </div>
         </div>
         
         <!-- Empty state -->
         <div v-if="filteredChatHistory.length === 0" class="history-empty">
-          <span class="icon">💬</span>
+          <span class="icon">○</span>
           <p v-if="searchQuery">Không tìm thấy chat nào phù hợp</p>
           <p v-else>Chưa có lịch sử chat</p>
         </div>
@@ -128,15 +128,15 @@
       @click.stop
     >
       <button class="context-menu-item" @click="renameChat(contextMenu.chat)">
-        <span class="icon">✏️</span>
+                  <span class="icon">✎</span>
         Đổi tên
       </button>
       <button class="context-menu-item" @click="duplicateChat(contextMenu.chat)">
-        <span class="icon">📋</span>
+                  <span class="icon">⎘</span>
         Sao chép
       </button>
       <button class="context-menu-item" @click="exportChat(contextMenu.chat)">
-        <span class="icon">📤</span>
+                  <span class="icon">↗</span>
         Xuất chat
       </button>
       <hr class="context-menu-divider">
@@ -144,7 +144,7 @@
         class="context-menu-item danger" 
         @click="deleteChat(contextMenu.chat.id)"
       >
-        <span class="icon">🗑️</span>
+                  <span class="icon">🗑</span>
         Xóa
       </button>
     </div>
@@ -162,7 +162,7 @@
         :class="{ active: showSearch }"
         title="Tìm kiếm"
       >
-        <span class="icon">🔍</span>
+                  <span class="icon">🔍</span>
       </button>
     </div>
   </aside>
@@ -495,14 +495,14 @@ export default {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: var(--gradient-primary);
+  background: #34495e;
   color: var(--color-text-inverse);
 }
 
 .app-title {
   font-size: var(--font-size-2xl);
   font-weight: var(--font-weight-bold);
-  color: var(--color-text-inverse);
+  color: #ffffff;
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -529,7 +529,7 @@ export default {
 .sidebar-actions {
   padding: var(--space-4);
   border-bottom: 1px solid var(--color-border-subtle);
-  background: var(--color-background-secondary);
+  background: #34495e;
 }
 
 /* Chat History */
@@ -545,13 +545,14 @@ export default {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 var(--space-4) var(--space-2) var(--space-4);
+  padding: 0 var(--space-4) var(--space-4) var(--space-4);
+  margin-bottom: var(--space-2);
 }
 
 .history-title {
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
+  color: #ffffff;
   margin: 0;
 }
 
@@ -559,15 +560,15 @@ export default {
   padding: var(--space-2);
   border: none;
   background: transparent;
-  color: var(--color-text-secondary);
+  color: rgba(255, 255, 255, 0.8);
   border-radius: var(--radius-lg);
   cursor: pointer;
   transition: all var(--transition-fast);
 }
 
 .btn-icon:hover {
-  background: var(--color-background-secondary);
-  color: var(--color-text-primary);
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
   transform: translateY(-1px);
 }
 
@@ -625,10 +626,23 @@ export default {
 }
 
 .history-item:hover {
-  background: var(--color-background-secondary);
+  background: var(--color-surface);
   border-color: var(--color-border);
   transform: translateY(-1px);
   box-shadow: var(--shadow-sm);
+}
+
+.history-item:hover::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.1);
+  pointer-events: none;
+  border-radius: inherit;
+  z-index: 1;
 }
 
 .history-item.active {
@@ -653,6 +667,8 @@ export default {
 .history-content {
   flex: 1;
   min-width: 0;
+  position: relative;
+  z-index: 2;
 }
 
 .history-item .history-title {
@@ -683,8 +699,8 @@ export default {
 
 .history-message-count {
   font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
-  background: var(--color-background-tertiary);
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.1);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-lg);
   font-weight: var(--font-weight-medium);
@@ -713,6 +729,8 @@ export default {
   gap: 0.25rem;
   opacity: 0;
   transition: opacity 0.2s ease;
+  position: relative;
+  z-index: 2;
 }
 
 .history-item:hover .history-actions {

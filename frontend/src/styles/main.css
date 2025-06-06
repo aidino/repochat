@@ -8,8 +8,8 @@
 
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #333;
+  background: var(--gradient-primary);
+  color: var(--color-text-primary);
   overflow: hidden;
 }
 
@@ -19,23 +19,23 @@ body {
   display: flex;
 }
 
-/* Modern Variables */
+/* Modern Variables - Custom Navy Theme */
 :root {
-  --primary-color: #4f46e5;
-  --primary-hover: #4338ca;
-  --secondary-color: #6b7280;
-  --background-color: #f9fafb;
-  --surface-color: #ffffff;
-  --border-color: #e5e7eb;
-  --text-primary: #111827;
-  --text-secondary: #6b7280;
+  --primary-color: #34495e;
+  --primary-hover: #2c3e50;
+  --secondary-color: rgba(255, 255, 255, 0.8);
+  --background-color: #2c3e50;
+  --surface-color: #34495e;
+  --border-color: rgba(255, 255, 255, 0.15);
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.8);
   --success-color: #10b981;
   --error-color: #ef4444;
   --warning-color: #f59e0b;
   
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.15);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.2), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.25), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   
   --radius-sm: 6px;
   --radius-md: 8px;
@@ -89,17 +89,20 @@ body {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
+  position: relative;
+  z-index: 2;
 }
 
 .btn-primary {
-  background: var(--gradient-primary);
-  color: var(--color-text-inverse);
+  background: #2980b9;
+  color: #ffffff;
+  font-weight: bold;
 }
 
 .btn-primary:hover {
-  background: var(--gradient-dark);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
+  background: #2980b9;
+  color: #ffffff;
+  font-weight: bold;
 }
 
 .btn-secondary {
@@ -109,8 +112,10 @@ body {
 }
 
 .btn-secondary:hover {
-  background: var(--color-background-secondary);
+  background: #2980b9;
   transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+  filter: brightness(1.1);
 }
 
 .input {
@@ -165,38 +170,39 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-brown);
+  background: rgba(255, 255, 255, 0.3);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-dark);
+  background: rgba(255, 255, 255, 0.5);
 }
 
 /* RepoChat Design System - Gemini-Inspired */
 
 /* ============================
    CSS CUSTOM PROPERTIES (Variables)
+   ColorHunt Palette: https://colorhunt.co/palette/27374d526d829db2bfdde6ed
    ============================ */
 :root {
   /* ColorHunt Palette - Primary Colors */
-  --color-light: #F2F2F2;      /* Light gray */
-  --color-cream: #EAE4D5;      /* Cream/beige */
-  --color-brown: #B6B09F;      /* Brown gray */
-  --color-dark: #000000;       /* Black */
+  --color-dark-navy: #27374d;      /* Dark Navy Blue - Primary */
+  --color-blue-gray: #526d82;      /* Medium Blue Gray - Secondary */
+  --color-light-blue: #9db2bf;     /* Light Blue Gray - Tertiary */
+  --color-very-light: #dde6ed;     /* Very Light Blue Gray - Background */
 
   /* Extended palette based on ColorHunt theme */
-  --color-primary-50: #fafafa;
-  --color-primary-100: #f5f5f5;
-  --color-primary-200: #eeeeee;
-  --color-primary-300: #e0e0e0;
-  --color-primary-400: #bdbdbd;
-  --color-primary-500: #9e9e9e;
-  --color-primary-600: #757575;
-  --color-primary-700: #616161;
-  --color-primary-800: #424242;
-  --color-primary-900: #212121;
-  --color-primary-950: #000000;
+  --color-primary-50: #f8f9fb;     /* Lightest variation */
+  --color-primary-100: #dde6ed;    /* ColorHunt Light */
+  --color-primary-200: #c8d6e0;    /* Lighter variation */
+  --color-primary-300: #9db2bf;    /* ColorHunt Light Blue */
+  --color-primary-400: #7a92a3;    /* Mid variation */
+  --color-primary-500: #526d82;    /* ColorHunt Medium */
+  --color-primary-600: #465b70;    /* Darker variation */
+  --color-primary-700: #394c5e;    /* Darker */
+  --color-primary-800: #27374d;    /* ColorHunt Dark Navy */
+  --color-primary-900: #1f2937;    /* Darkest variation */
+  --color-primary-950: #0f172a;    /* Extra dark */
 
   /* Cream/Beige variations */
   --color-secondary-50: #fefefe;
@@ -231,30 +237,30 @@ body {
   --color-error: #ef4444;
   --color-info: var(--color-brown);
 
-  /* Background colors */
-  --color-background: var(--color-light);
-  --color-surface: var(--color-cream);
-  --color-surface-variant: rgba(234, 228, 213, 0.5);
+  /* Background colors - Custom Navy Theme */
+  --color-background: #2c3e50;
+  --color-surface: #34495e;
+  --color-surface-variant: rgba(52, 73, 94, 0.3);
   
-  /* Text colors */
-  --color-text-primary: var(--color-dark);
-  --color-text-secondary: var(--color-brown);
-  --color-text-tertiary: var(--color-primary-600);
-  --color-text-inverse: var(--color-light);
+  /* Text colors - White Theme */
+  --color-text-primary: #ffffff;
+  --color-text-secondary: rgba(255, 255, 255, 0.8);
+  --color-text-tertiary: rgba(255, 255, 255, 0.6);
+  --color-text-inverse: #2c3e50;
 
-  /* Border colors */
-  --color-border: rgba(182, 176, 159, 0.3);
-  --color-border-strong: var(--color-brown);
+  /* Border colors - Navy Theme */
+  --color-border: rgba(255, 255, 255, 0.15);
+  --color-border-strong: rgba(255, 255, 255, 0.3);
 
-  /* Main gradient with ColorHunt colors */
-  --gradient-primary: linear-gradient(135deg, var(--color-cream) 0%, var(--color-brown) 100%);
-  --gradient-secondary: linear-gradient(135deg, var(--color-light) 0%, var(--color-cream) 100%);
-  --gradient-dark: linear-gradient(135deg, var(--color-brown) 0%, var(--color-dark) 100%);
+  /* Main gradient with Navy colors */
+  --gradient-primary: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+  --gradient-secondary: linear-gradient(135deg, #2c3e50 0%, #1a252f 100%);
+  --gradient-dark: linear-gradient(135deg, #1a252f 0%, #0f1419 100%);
 
-  /* Updated brand colors with ColorHunt palette */
-  --color-primary: var(--color-brown);
-  --color-secondary: var(--color-secondary-700);
-  --color-accent: var(--color-dark);
+  /* Updated brand colors with Navy theme */
+  --color-primary: #34495e;
+  --color-secondary: #2c3e50;
+  --color-accent: #ffffff;
 
   /* Semantic Colors */
   --success-50: #f0fdf4;
@@ -349,29 +355,73 @@ body {
    DARK MODE VARIABLES
    ============================ */
 [data-theme="dark"] {
-  /* Dark mode with ColorHunt palette adaptations */
-  --color-background: var(--color-dark);
-  --color-background-secondary: var(--color-secondary-950);
-  --color-background-tertiary: var(--color-secondary-900);
-  --color-background-muted: var(--color-secondary-800);
+  /* Dark mode with Navy theme - Darker variants */
+  --color-background: #1a252f;
+  --color-background-secondary: #0f1419;
+  --color-background-tertiary: #0a0e11;
+  --color-background-muted: #2c3e50;
   
-  --color-surface: var(--color-secondary-950);
-  --color-surface-elevated: var(--color-secondary-900);
-  --color-surface-variant: rgba(96, 92, 81, 0.5);
+  --color-surface: #2c3e50;
+  --color-surface-elevated: #34495e;
+  --color-surface-variant: rgba(52, 73, 94, 0.4);
   
-  --color-text-primary: var(--color-light);
-  --color-text-secondary: var(--color-cream);
-  --color-text-tertiary: var(--color-secondary-600);
-  --color-text-disabled: var(--color-secondary-700);
-  --color-text-inverse: var(--color-dark);
+  --color-text-primary: #ffffff;
+  --color-text-secondary: rgba(255, 255, 255, 0.9);
+  --color-text-tertiary: rgba(255, 255, 255, 0.7);
+  --color-text-disabled: rgba(255, 255, 255, 0.5);
+  --color-text-inverse: #1a252f;
   
-  --color-border: rgba(182, 176, 159, 0.2);
-  --color-border-strong: var(--color-secondary-700);
-  --color-border-subtle: rgba(182, 176, 159, 0.1);
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-border-strong: rgba(255, 255, 255, 0.25);
+  --color-border-subtle: rgba(255, 255, 255, 0.05);
   
   /* Dark mode gradients */
-  --gradient-primary: linear-gradient(135deg, var(--color-secondary-900) 0%, var(--color-secondary-800) 100%);
-  --gradient-secondary: linear-gradient(135deg, var(--color-dark) 0%, var(--color-secondary-950) 100%);
+  --gradient-primary: linear-gradient(135deg, #2c3e50 0%, #1a252f 100%);
+  --gradient-secondary: linear-gradient(135deg, #1a252f 0%, #0f1419 100%);
+}
+
+/* ============================
+   HOVER EFFECTS - Alpha 0.1 Overlay
+   ============================ */
+.hover-overlay:hover::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.1);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* General hover effects for interactive elements */
+.btn:hover,
+.card:hover,
+.history-item:hover,
+.example-btn:hover {
+  position: relative;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.btn:hover::before,
+.card:hover::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.1);
+  pointer-events: none;
+  border-radius: inherit;
+  z-index: 1;
+}
+
+/* Ensure button text is above overlay */
+.btn > * {
+  position: relative;
+  z-index: 3;
 }
 
 /* ============================
@@ -479,22 +529,26 @@ code {
   pointer-events: none;
 }
 
-/* Primary Button - ColorHunt Theme */
+/* Primary Button - Blue Theme */
 .btn-primary {
-  background: var(--gradient-primary);
-  color: var(--color-text-inverse);
+  background: #2980b9;
+  color: #ffffff;
+  font-weight: bold;
   border: none;
   box-shadow: var(--shadow-sm);
 }
 
 .btn-primary:hover:not(:disabled) {
+  background: #2980b9;
   transform: translateY(-1px);
   box-shadow: var(--shadow-md);
+  filter: brightness(1.1);
 }
 
 .btn-primary:active {
   transform: translateY(0);
   box-shadow: var(--shadow-sm);
+  filter: brightness(0.95);
 }
 
 /* Secondary Button */
