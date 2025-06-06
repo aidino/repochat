@@ -1,4 +1,5 @@
-version: '3.8'
+# RepoChat Development Environment
+# Docker Compose configuration for multi-service setup
 
 services:
   # Neo4j Database for Code Knowledge Graph

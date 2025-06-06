@@ -944,19 +944,19 @@ code {
   --color-primary-light: #e2e8f0;     /* Light primary for backgrounds */
   
   /* Background Colors */
-  --color-background: #0f1419;        /* Very dark background */
-  --color-background-secondary: #1a202c; /* Secondary background */
-  --color-surface: #2d3748;           /* Surface/card backgrounds */
-  --color-surface-hover: #4a5568;     /* Hover state for surfaces */
+  --color-background: #111827;        /* Dark background - lighter than before */
+  --color-background-secondary: #1f2937; /* Secondary background */
+  --color-surface: #374151;           /* Surface/card backgrounds - lighter */
+  --color-surface-hover: #4b5563;     /* Hover state for surfaces */
   
   /* Chat-specific colors */
   --color-chat-sidebar: #1a202c;      /* Chat sidebar background */
-  --color-chat-main: #2d3748;         /* Main chat area background */
+  --color-chat-main: #1f2937;         /* Main chat area background - darker for better contrast */
   --color-message-user: #667eea;      /* User message background */
   --color-message-user-text: #ffffff; /* User message text */
-  --color-message-bot: #4a5568;       /* Bot message background */
-  --color-message-bot-text: #e2e8f0;  /* Bot message text */
-  --color-message-hover: #718096;     /* Message hover state */
+  --color-message-bot: #374151;       /* Bot message background */
+  --color-message-bot-text: #f3f4f6;  /* Bot message text - lighter */
+  --color-message-hover: #4b5563;     /* Message hover state */
   
   /* Text Colors */
   --color-text-primary: #f7fafc;      /* Primary text - white */
@@ -982,7 +982,7 @@ code {
   
   /* Chat Input */
   --color-input-bg: #374151;
-  --color-input-border: #4a5568;
+  --color-input-border: #6b7280;
   --color-input-focus: #667eea;
   
   /* Shadows */
@@ -1056,49 +1056,27 @@ code {
 
 /* App Container */
 .app-container {
-  display: flex;
-  width: 100%;
+  display: block; /* Changed from flex to block for fixed sidebar layout */
+  width: 100vw;
   height: 100vh;
   background: var(--color-background);
   overflow: hidden;
+  position: relative;
 }
 
-/* Sidebar Styling */
+/* Fixed Sidebar - Always visible */
 .sidebar {
-  width: 320px;
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 280px;
+  height: 100vh;
+  z-index: 10;
   background: var(--color-chat-sidebar);
   border-right: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-}
-
-/* Mobile sidebar behavior */
-@media (max-width: 1023px) {
-  .sidebar {
-    position: fixed;
-    left: 0;
-    top: 0;
-    height: 100vh;
-    z-index: 1000;
-    transform: translateX(0);
-    transition: transform var(--transition-normal);
-  }
-  
-  .sidebar.sidebar-mobile-hidden {
-    transform: translateX(-100%);
-  }
-  
-  /* Mobile overlay */
-  .sidebar-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 999;
-  }
 }
 
 .sidebar-header {
@@ -1113,13 +1091,16 @@ code {
   padding: var(--space-2);
 }
 
-/* Chat Container */
+/* Chat Container - With margin for fixed sidebar */
 .chat-container {
-  flex: 1;
+  margin-left: 280px; /* Same as sidebar width */
+  width: calc(100vw - 280px); /* Remaining width after sidebar */
   display: flex;
   flex-direction: column;
   background: var(--color-chat-main);
   overflow: hidden;
+  height: 100vh;
+  min-height: 100vh;
 }
 
 /* Chat Header */
@@ -1167,6 +1148,7 @@ code {
   overflow-y: auto;
   background: var(--color-chat-main);
   position: relative;
+  min-height: 0; /* Allow flex item to shrink */
 }
 
 .messages-list {

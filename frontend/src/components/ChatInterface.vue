@@ -18,13 +18,6 @@
           <span class="mr-2">🔄</span>
           Làm mới
         </button>
-        <button 
-          @click="$emit('toggle-sidebar')"
-          class="btn-secondary text-sm lg:hidden"
-        >
-          <span class="mr-2">☰</span>
-          Menu
-        </button>
       </div>
     </header>
 
@@ -158,8 +151,7 @@ export default {
 
   emits: [
     'send-message',
-    'refresh-chat',
-    'toggle-sidebar'
+    'refresh-chat'
   ],
 
   data() {
@@ -204,19 +196,10 @@ export default {
       });
     },
 
-    async sendMessage() {
+    sendMessage() {
       if (!this.canSendMessage) return;
 
-      const messageText = this.currentMessage.trim();
-      const userMessage = {
-        id: Date.now(),
-        text: messageText,
-        isUser: true,
-        timestamp: new Date()
-      };
-
-      // Add user message
-      this.messages.push(userMessage);
+      const message = this.currentMessage.trim();
       this.currentMessage = '';
       
       // Reset textarea height
@@ -227,16 +210,17 @@ export default {
         }
       });
 
-      // Emit to parent for processing
-      this.$emit('send-message', {
-        message: messageText,
-        onResponse: this.handleBotResponse,
-        onError: this.handleError
-      });
-
       this.isLoading = true;
       this.isTyping = true;
-      this.scrollToBottom();
+
+      // Emit message to parent
+      this.$emit('send-message', message);
+
+      // Simulate response delay
+      setTimeout(() => {
+        this.isLoading = false;
+        this.isTyping = false;
+      }, 2000);
     },
 
     sendExampleQuestion(question) {
@@ -244,42 +228,36 @@ export default {
       this.sendMessage();
     },
 
-    handleBotResponse(responseText) {
-      this.isLoading = false;
-      this.isTyping = false;
-
-      const botMessage = {
-        id: Date.now() + 1,
-        text: responseText,
-        isUser: false,
-        timestamp: new Date()
-      };
-
-      this.messages.push(botMessage);
-      this.scrollToBottom();
-    },
-
-    handleError(error) {
-      this.isLoading = false;
-      this.isTyping = false;
-
-      const errorMessage = {
-        id: Date.now() + 1,
-        text: `❌ Xin lỗi, đã có lỗi xảy ra: ${error.message || 'Không thể kết nối với server'}`,
-        isUser: false,
-        timestamp: new Date()
-      };
-
-      this.messages.push(errorMessage);
-      this.scrollToBottom();
-    },
-
     refreshChat() {
-      this.messages = [];
-      this.currentMessage = '';
-      this.isLoading = false;
-      this.isTyping = false;
       this.$emit('refresh-chat');
+    },
+
+    formatMessageText(text) {
+      // Format markdown-like syntax
+      return text
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+        .replace(/`(.*?)`/g, '<code>$1</code>')
+        .replace(/\n/g, '<br>');
+    },
+
+    formatTime(timestamp) {
+      if (!timestamp) return '';
+      
+      const now = new Date();
+      const time = new Date(timestamp);
+      const diffMs = now - time;
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+
+      if (diffMins < 1) return 'Vừa xong';
+      if (diffMins < 60) return `${diffMins} phút trước`;
+      if (diffHours < 24) return `${diffHours} giờ trước`;
+      if (diffDays < 7) return `${diffDays} ngày trước`;
+      
+      return time.toLocaleDateString('vi-VN');
     },
 
     scrollToBottom() {
@@ -289,67 +267,35 @@ export default {
           container.scrollTop = container.scrollHeight;
         }
       });
+    }
+  },
+
+  watch: {
+    messages: {
+      handler() {
+        this.scrollToBottom();
+      },
+      deep: true
     },
 
-    formatTime(timestamp) {
-      return timestamp.toLocaleTimeString('vi-VN', {
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    },
-
-    formatMessageText(text) {
-      // Basic text formatting for code blocks, links, etc.
-      return text
-        .replace(/`([^`]+)`/g, '<code>$1</code>')
-        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-        .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
-    },
-
-    // Public methods that parent can call
-    addMessage(message) {
-      this.messages.push({
-        id: Date.now(),
-        ...message
-      });
-      this.scrollToBottom();
-    },
-
-    setLoading(loading) {
-      this.isLoading = loading;
-    },
-
-    setTyping(typing) {
-      this.isTyping = typing;
-    },
-
-    clearMessages() {
-      this.messages = [];
+    initialMessages: {
+      handler(newMessages) {
+        this.messages = [...newMessages];
+      },
+      deep: true
     }
   },
 
   mounted() {
-    // Auto-focus input when component mounts
+    // Focus on message input
     this.$nextTick(() => {
       if (this.$refs.messageInput) {
         this.$refs.messageInput.focus();
       }
     });
-
-    // Check online status
-    const updateOnlineStatus = () => {
-      this.isOnline = navigator.onLine;
-    };
-
-    window.addEventListener('online', updateOnlineStatus);
-    window.addEventListener('offline', updateOnlineStatus);
-
-    // Cleanup
-    this.$on('beforeUnmount', () => {
-      window.removeEventListener('online', updateOnlineStatus);
-      window.removeEventListener('offline', updateOnlineStatus);
-    });
+    
+    // Initial scroll to bottom
+    this.scrollToBottom();
   }
 }
 </script>

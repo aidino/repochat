@@ -22,7 +22,7 @@ if ! docker info >/dev/null 2>&1; then
 fi
 
 # Check if Docker Compose is available
-if ! command -v docker-compose >/dev/null 2>&1; then
+if ! command -v docker compose >/dev/null 2>&1; then
     echo -e "${RED}❌ Docker Compose is not installed.${NC}"
     exit 1
 fi
@@ -43,13 +43,13 @@ fi
 # Function to show service status
 show_status() {
     echo -e "\n${BLUE}📊 Service Status:${NC}"
-    docker-compose ps
+    docker compose ps
 }
 
 # Function to show logs
 show_logs() {
     echo -e "\n${BLUE}📋 Recent Logs:${NC}"
-    docker-compose logs --tail=20
+    docker compose logs --tail=20
 }
 
 # Function to show URLs
@@ -64,7 +64,7 @@ show_urls() {
 # Function to cleanup
 cleanup() {
     echo -e "\n${YELLOW}🧹 Cleaning up...${NC}"
-    docker-compose down
+    docker compose down
     echo -e "${GREEN}✅ Services stopped${NC}"
 }
 
@@ -75,7 +75,7 @@ trap cleanup EXIT
 case "${1:-start}" in
     "start"|"up")
         echo -e "${GREEN}🏁 Starting all services...${NC}"
-        docker-compose up --build -d
+        docker compose up --build -d
         
         echo -e "${GREEN}⏳ Waiting for services to be ready...${NC}"
         sleep 10
@@ -84,31 +84,31 @@ case "${1:-start}" in
         show_urls
         
         echo -e "\n${GREEN}✅ Development environment is ready!${NC}"
-        echo -e "${BLUE}💡 Use 'docker-compose logs -f' to follow logs${NC}"
+        echo -e "${BLUE}💡 Use 'docker compose logs -f' to follow logs${NC}"
         echo -e "${BLUE}💡 Use 'Ctrl+C' to stop all services${NC}"
         
         # Follow logs
         echo -e "\n${BLUE}📋 Following logs (Ctrl+C to stop):${NC}"
-        docker-compose logs -f
+        docker compose logs -f
         ;;
         
     "build")
         echo -e "${GREEN}🔨 Building all services...${NC}"
-        docker-compose build --no-cache
+        docker compose build --no-cache
         echo -e "${GREEN}✅ Build completed${NC}"
         ;;
         
     "stop"|"down")
         echo -e "${YELLOW}🛑 Stopping all services...${NC}"
-        docker-compose down
+        docker compose down
         echo -e "${GREEN}✅ All services stopped${NC}"
         exit 0
         ;;
         
     "clean")
         echo -e "${YELLOW}🧹 Cleaning up containers and volumes...${NC}"
-        docker-compose down -v
-        docker-compose down --rmi all --volumes --remove-orphans
+        docker compose down -v
+        docker compose down --rmi all --volumes --remove-orphans
         echo -e "${GREEN}✅ Cleanup completed${NC}"
         exit 0
         ;;
@@ -126,7 +126,7 @@ case "${1:-start}" in
         
     "restart")
         echo -e "${YELLOW}♻️  Restarting all services...${NC}"
-        docker-compose restart
+        docker compose restart
         show_status
         show_urls
         exit 0

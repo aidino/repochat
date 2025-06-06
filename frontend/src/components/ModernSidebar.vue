@@ -1,17 +1,11 @@
 <template>
-  <div class="sidebar" :class="{ 'sidebar-mobile-hidden': !showOnMobile }">
+  <div class="sidebar">
     <!-- Sidebar Header -->
     <div class="sidebar-header">
       <div class="sidebar-brand">
         <h1 class="text-xl font-bold text-primary">RepoChat</h1>
         <p class="text-sm text-tertiary">AI Code Assistant</p>
       </div>
-      <button 
-        @click="$emit('close-sidebar')"
-        class="sidebar-close-btn lg:hidden"
-      >
-        ✕
-      </button>
     </div>
 
     <!-- Sidebar Content -->
@@ -61,9 +55,6 @@
               <div class="chat-preview">{{ chat.lastMessage || 'Cuộc trò chuyện mới' }}</div>
               <div class="chat-meta">
                 <span class="chat-time">{{ formatChatTime(chat.updatedAt) }}</span>
-                <span v-if="chat.messageCount" class="message-count">
-                  {{ chat.messageCount }} tin nhắn
-                </span>
               </div>
             </div>
             <div class="chat-actions">
@@ -155,13 +146,6 @@
         {{ action.label }}
       </button>
     </div>
-
-    <!-- Overlay for mobile -->
-    <div 
-      v-if="showOnMobile" 
-      class="sidebar-overlay lg:hidden"
-      @click="$emit('close-sidebar')"
-    ></div>
   </div>
 </template>
 
@@ -170,10 +154,6 @@ export default {
   name: 'ModernSidebar',
 
   props: {
-    showOnMobile: {
-      type: Boolean,
-      default: false
-    },
     currentChatId: {
       type: [String, Number],
       default: null
@@ -202,7 +182,6 @@ export default {
           id: 1,
           title: 'Phân tích dự án Vue.js',
           lastMessage: 'Component structure trông tốt...',
-          messageCount: 15,
           updatedAt: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
           isFavorite: true
         },
@@ -210,7 +189,6 @@ export default {
           id: 2,
           title: 'Review code React',
           lastMessage: 'Tìm thấy một số hook patterns...',
-          messageCount: 8,
           updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
           isFavorite: false
         },
@@ -218,7 +196,6 @@ export default {
           id: 3,
           title: 'Tối ưu performance',
           lastMessage: 'Bundle size có thể được reduce...',
-          messageCount: 23,
           updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
           isFavorite: false
         },
@@ -226,7 +203,6 @@ export default {
           id: 4,
           title: 'Security audit',
           lastMessage: 'Phát hiện các vấn đề CSRF...',
-          messageCount: 12,
           updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2), // 2 days ago
           isFavorite: true
         }
@@ -292,7 +268,7 @@ export default {
         id: Date.now(),
         title: 'Cuộc trò chuyện mới',
         lastMessage: '',
-        messageCount: 0,
+
         updatedAt: new Date(),
         isFavorite: false
       };
@@ -595,11 +571,7 @@ export default {
   color: var(--color-text-muted);
 }
 
-.message-count {
-  padding: 2px 6px;
-  background: var(--color-surface-hover);
-  border-radius: var(--radius-full);
-}
+
 
 /* Chat Actions */
 .chat-actions {
@@ -775,20 +747,13 @@ export default {
   background: rgba(245, 101, 101, 0.1);
 }
 
-/* Mobile responsiveness */
-@media (max-width: 768px) {
-  .sidebar {
-    position: fixed;
-    left: 0;
-    top: 0;
-    height: 100vh;
-    z-index: 999;
-    transform: translateX(0);
-    transition: transform var(--transition-normal);
-  }
-  
-  .sidebar-mobile-hidden {
-    transform: translateX(-100%);
-  }
+/* Fixed sidebar - always visible */
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 280px;
+  height: 100vh;
+  z-index: 10;
 }
 </style> 

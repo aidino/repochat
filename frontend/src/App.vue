@@ -9,9 +9,9 @@
 
     <!-- Main App Layout -->
     <template v-else>
-      <!-- Modern Sidebar -->
+      <!-- Modern Sidebar - Always visible -->
       <ModernSidebar
-        :show-on-mobile="sidebarVisible"
+        :show-on-mobile="true"
         :current-chat-id="currentChatId"
         :user-name="userSettings.name"
         @new-chat="handleNewChat"
@@ -36,7 +36,6 @@
         :initial-messages="currentChatMessages"
         @send-message="handleSendMessage"
         @refresh-chat="handleRefreshChat"
-        @toggle-sidebar="toggleSidebar"
         ref="chatInterface"
       />
     </template>
@@ -61,7 +60,7 @@ export default {
     return {
       // App State
       currentView: 'chat', // 'chat' | 'settings'
-      sidebarVisible: window.innerWidth >= 1024, // Show on desktop, hide on mobile by default
+      sidebarVisible: true, // Always visible - removed responsive logic
       
       // Chat State
       currentChatId: null,
@@ -122,7 +121,6 @@ export default {
     openSettings() {
       console.log('Opening settings...');
       this.currentView = 'settings';
-      this.sidebarVisible = false;
     },
 
     goBackFromSettings() {
@@ -140,20 +138,11 @@ export default {
       }, 2000);
     },
 
-    // === Sidebar Methods ===
+    // === Sidebar Methods (Simplified - no toggle behavior) ===
     
-    toggleSidebar() {
-      // Only toggle on mobile/tablet
-      if (window.innerWidth < 1024) {
-        this.sidebarVisible = !this.sidebarVisible;
-      }
-    },
-
     closeSidebar() {
-      // Only close on mobile/tablet
-      if (window.innerWidth < 1024) {
-        this.sidebarVisible = false;
-      }
+      // No-op: sidebar always visible now
+      console.log('Sidebar close requested but ignored - sidebar always visible');
     },
 
     // === Chat Management Methods ===
@@ -166,20 +155,17 @@ export default {
         messages: [],
         createdAt: new Date(),
         updatedAt: new Date(),
-        isFavorite: false,
-        messageCount: 0
+        isFavorite: false
       };
 
       this.chats.set(newChatId, newChat);
       this.currentChatId = newChatId;
-      this.sidebarVisible = false;
 
       console.log('Created new chat:', newChat);
     },
 
     handleSelectChat(chat) {
       this.currentChatId = chat.id;
-      this.sidebarVisible = false;
       
       console.log('Selected chat:', chat.id, chat.title);
     },
@@ -198,89 +184,72 @@ export default {
     handleRenameChat(data) {
       const chat = this.chats.get(data.id);
       if (chat) {
-        chat.title = data.title;
+        chat.title = data.newTitle;
         chat.updatedAt = new Date();
+        console.log('Renamed chat:', data.id, 'to:', data.newTitle);
       }
-      
-      console.log('Renamed chat:', data);
     },
 
     handleExportChat(chat) {
-      const chatData = this.chats.get(chat.id);
-      if (chatData) {
-        const exportData = {
-          ...chatData,
-          exportedAt: new Date().toISOString()
-        };
-        
-        const blob = new Blob([JSON.stringify(exportData, null, 2)], {
-          type: 'application/json'
-        });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `repochat-${chat.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-      }
-      
+      // Create export data
+      const exportData = {
+        title: chat.title,
+        messages: chat.messages,
+        createdAt: chat.createdAt,
+        exportedAt: new Date()
+      };
+
+      // Create downloadable file
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+        type: 'application/json'
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `repochat-${chat.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+
       console.log('Exported chat:', chat.id);
     },
 
     handleDuplicateChat(chat) {
-      const originalChat = this.chats.get(chat.id);
-      if (originalChat) {
-        const duplicatedChat = {
-          ...originalChat,
-          id: Date.now(),
-          title: originalChat.title + ' (Bản sao)',
-          createdAt: new Date(),
-          updatedAt: new Date()
-        };
-        
-        this.chats.set(duplicatedChat.id, duplicatedChat);
-        this.currentChatId = duplicatedChat.id;
-      }
-      
-      console.log('Duplicated chat:', chat.id);
+      const newChatId = Date.now();
+      const duplicatedChat = {
+        id: newChatId,
+        title: `${chat.title} (Copy)`,
+                 messages: [...chat.messages],
+         createdAt: new Date(),
+         updatedAt: new Date(),
+         isFavorite: false
+      };
+
+      this.chats.set(newChatId, duplicatedChat);
+      this.currentChatId = newChatId;
+
+      console.log('Duplicated chat:', chat.id, 'to:', newChatId);
     },
 
     handleToggleFavorite(chat) {
-      const chatData = this.chats.get(chat.id);
-      if (chatData) {
-        chatData.isFavorite = chat.isFavorite;
-        chatData.updatedAt = new Date();
+      const existingChat = this.chats.get(chat.id);
+      if (existingChat) {
+        existingChat.isFavorite = !existingChat.isFavorite;
+        existingChat.updatedAt = new Date();
+        console.log('Toggled favorite for chat:', chat.id, existingChat.isFavorite);
       }
-      
-      console.log('Toggled favorite for chat:', chat.id, chat.isFavorite);
     },
 
     handleClearAllChats() {
-      this.chats.clear();
-      this.handleNewChat();
-      
-      console.log('Cleared all chats');
-    },
-
-    handleRefreshChat() {
-      // Clear current chat messages
-      if (this.currentChatId) {
-        const chat = this.chats.get(this.currentChatId);
-        if (chat) {
-          chat.messages = [];
-          chat.messageCount = 0;
-          chat.updatedAt = new Date();
-        }
+      if (confirm('Bạn có chắc chắn muốn xóa tất cả cuộc trò chuyện? Hành động này không thể hoàn tác.')) {
+        this.chats.clear();
+        this.handleNewChat();
+        console.log('Cleared all chats');
       }
-      
-      console.log('Refreshed chat:', this.currentChatId);
     },
 
     // === Message Handling ===
     
-    async handleSendMessage(data) {
-      console.log('Sending message:', data.message);
-      
+    async handleSendMessage(message) {
       if (!this.currentChatId) {
         this.handleNewChat();
       }
@@ -288,58 +257,98 @@ export default {
       const chat = this.chats.get(this.currentChatId);
       if (!chat) return;
 
-      // Update chat metadata
-      chat.messageCount = (chat.messageCount || 0) + 1;
-      chat.updatedAt = new Date();
-      
-      // Generate appropriate title for new chats
-      if (chat.title === 'Cuộc trò chuyện mới' && data.message.length > 0) {
-        chat.title = this.generateChatTitle(data.message);
+      // Add user message
+      const userMessage = {
+        id: Date.now(),
+        text: message,
+        isUser: true,
+        timestamp: new Date()
+      };
+
+             chat.messages.push(userMessage);
+       chat.updatedAt = new Date();
+
+      // Generate title from first message
+      if (chat.messages.length === 1) {
+        chat.title = this.generateChatTitle(message);
       }
 
-      try {
-        // TODO: Replace with actual API call
-        const response = await this.mockApiCall(data.message);
-        
-        // Handle successful response
-        data.onResponse(response);
-        
-        // Update chat with bot response
-        chat.messageCount += 1;
+      // Simulate AI response with delay
+      setTimeout(() => {
+        const botMessage = {
+          id: Date.now() + 1,
+          text: this.generateAIResponse(message),
+          isUser: false,
+          timestamp: new Date()
+        };
+
+        chat.messages.push(botMessage);
         chat.updatedAt = new Date();
-        
-      } catch (error) {
-        console.error('Error sending message:', error);
-        data.onError(error);
+
+        console.log('Added bot response to chat:', this.currentChatId);
+      }, 1000 + Math.random() * 2000); // 1-3 second delay
+    },
+
+    handleRefreshChat() {
+      if (this.currentChatId) {
+        const chat = this.chats.get(this.currentChatId);
+        if (chat && chat.messages.length > 0) {
+          // Get the last user message and regenerate response
+          const lastUserMessage = [...chat.messages].reverse().find(m => m.isUser);
+          if (lastUserMessage) {
+            // Remove last bot message if exists
+            const lastBotIndex = chat.messages.findLastIndex(m => !m.isUser);
+            if (lastBotIndex > -1) {
+              chat.messages.splice(lastBotIndex, 1);
+            }
+
+            // Generate new response
+            setTimeout(() => {
+              const botMessage = {
+                id: Date.now(),
+                text: this.generateAIResponse(lastUserMessage.text),
+                isUser: false,
+                timestamp: new Date()
+              };
+
+              chat.messages.push(botMessage);
+              chat.updatedAt = new Date();
+
+              console.log('Refreshed chat response:', this.currentChatId);
+            }, 1000);
+          }
+        }
       }
     },
 
-    // === Mock API Call (Replace with real backend integration) ===
-    
-    async mockApiCall(message) {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Mock intelligent responses
+    generateAIResponse(message) {
+      // Mock AI responses với nội dung thực tế hữu ích
       const responses = {
-        'phân tích': `🔍 **Phân tích dự án hoàn tất**
+        'kiến trúc': `🏗️ **Phân tích Kiến trúc Dự án**
 
-Tôi đã phân tích dự án của bạn và phát hiện:
+Dựa trên codebase đã scan, đây là phân tích kiến trúc tổng quan:
 
-**✅ Điểm mạnh:**
-- Cấu trúc thư mục rõ ràng và có tổ chức
-- Component architecture tốt với separation of concerns
-- Modern CSS với CSS variables và utility classes
+**📋 Cấu trúc Dự án:**
+- **Frontend**: Vue.js 3 với Composition API
+- **Backend**: Python FastAPI với multi-agent architecture  
+- **Database**: Neo4j cho Code Knowledge Graph
+- **Containerization**: Docker với multi-stage builds
 
-**⚠️ Cần cải thiện:**
-- Thiếu unit tests cho một số components quan trọng
-- Component state management có thể tối ưu hơn
-- Accessibility features cần được bổ sung thêm
+**✅ Điểm Mạnh:**
+- Clean separation of concerns với TEAM-based architecture
+- Comprehensive logging và monitoring
+- Production-ready Docker setup
+- Modern frontend với responsive design
 
-**🚀 Đề xuất:**
-1. Implement Vue Testing Library cho unit tests
-2. Consider Pinia cho centralized state management
-3. Add ARIA labels và keyboard navigation support`,
+**⚠️ Cần Cải thiện:**
+- API documentation có thể detailed hơn
+- Error handling ở một số endpoints
+- Test coverage cho integration scenarios
+
+**🚀 Khuyến nghị:**
+1. Implement comprehensive API docs với OpenAPI/Swagger
+2. Add more integration tests cho multi-agent workflows  
+3. Consider implementing caching layer cho better performance`,
 
         'bảo mật': `🔒 **Security Audit Report**
 
@@ -488,33 +497,17 @@ Hãy thử lại với thông tin cụ thể hơn! 🚀`;
     // Create initial chat
     this.handleNewChat();
     
-    // Handle window resize for responsive sidebar
-    const handleResize = () => {
-      if (window.innerWidth >= 1024) {
-        this.sidebarVisible = true; // Always show on desktop
-      } else {
-        this.sidebarVisible = false; // Hide on mobile by default
-      }
-    };
-    
-    window.addEventListener('resize', handleResize);
-    
-    // Store resize handler for cleanup
-    this.resizeHandler = handleResize;
+    // No more responsive sidebar logic - always visible
     
     // Check online status periodically
     setInterval(() => {
       // This could be used to check backend connectivity
     }, 30000);
 
-    console.log('RepoChat App initialized with modern theme');
-    },
+    console.log('RepoChat App initialized with fixed sidebar layout');
+  },
 
   beforeUnmount() {
-    // Cleanup event listeners
-    if (this.resizeHandler) {
-      window.removeEventListener('resize', this.resizeHandler);
-    }
     // Save user settings before leaving
     this.saveUserSettings();
   }
@@ -524,11 +517,8 @@ Hãy thử lại với thông tin cụ thể hơn! 🚀`;
 <style>
 /* Global styles are already in main.css */
 /* App-specific styles can be added here if needed */
-
-/* Ensure proper mobile behavior */
-@media (max-width: 768px) {
-  .app-container {
-    overflow: hidden;
-  }
+.app-container {
+  display: flex;
+  height: 100vh;
 }
 </style> 
