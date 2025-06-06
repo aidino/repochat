@@ -475,53 +475,61 @@ export default {
 </script>
 
 <style scoped>
-/* Sidebar Container */
+/* Sidebar Container - Gemini Design */
 .sidebar {
   width: 300px;
   height: 100vh;
-  background: var(--bg-secondary);
-  border-right: 1px solid var(--border-color);
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border-subtle);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(20px);
 }
 
 /* Sidebar Header */
 .sidebar-header {
-  padding: 1.5rem 1rem;
-  border-bottom: 1px solid var(--border-color);
+  padding: var(--space-6) var(--space-4);
+  border-bottom: 1px solid var(--color-border-subtle);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  background: var(--gemini-gradient);
+  color: var(--color-text-inverse);
 }
 
 .app-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--text-primary);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-inverse);
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
   margin: 0;
+  letter-spacing: -0.025em;
 }
 
 .app-icon {
-  font-size: 1.8rem;
+  font-size: var(--font-size-3xl);
 }
 
 .app-version {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  background: var(--bg-tertiary);
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.375rem;
-  font-weight: 500;
+  font-size: var(--font-size-xs);
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.15);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-lg);
+  font-weight: var(--font-weight-medium);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 /* Sidebar Actions */
 .sidebar-actions {
-  padding: 1rem;
-  border-bottom: 1px solid var(--border-color);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border-subtle);
+  background: var(--color-background-secondary);
 }
 
 /* Chat History */
@@ -530,41 +538,42 @@ export default {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: 1rem 0;
+  padding: var(--space-4) 0;
 }
 
 .history-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 1rem 0.5rem 1rem;
+  padding: 0 var(--space-4) var(--space-2) var(--space-4);
 }
 
 .history-title {
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
   margin: 0;
 }
 
 .btn-icon {
-  padding: 0.5rem;
+  padding: var(--space-2);
   border: none;
   background: transparent;
-  color: var(--text-secondary);
-  border-radius: 0.375rem;
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-fast);
 }
 
 .btn-icon:hover {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
+  background: var(--color-background-secondary);
+  color: var(--color-text-primary);
+  transform: translateY(-1px);
 }
 
 .btn-icon.active {
-  background: var(--primary-color);
-  color: white;
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
 }
 
 .spinning {
@@ -578,42 +587,55 @@ export default {
 
 /* Search */
 .history-search {
-  padding: 0 1rem 0.5rem 1rem;
+  padding: 0 var(--space-4) var(--space-2) var(--space-4);
 }
 
 .search-input {
   width: 100%;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
+  border-radius: var(--radius-xl);
+  border: 2px solid var(--color-border);
+  padding: var(--space-3);
+  font-family: var(--font-family-primary);
+}
+
+.search-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
 }
 
 /* History List */
 .history-list {
   flex: 1;
   overflow-y: auto;
-  padding: 0 0.5rem;
+  padding: 0 var(--space-2);
 }
 
 .history-item {
   display: flex;
   align-items: center;
-  padding: 0.75rem 0.5rem;
-  margin-bottom: 0.25rem;
-  border-radius: 0.5rem;
+  padding: var(--space-3) var(--space-2);
+  margin-bottom: var(--space-1);
+  border-radius: var(--radius-xl);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-fast);
   border: 1px solid transparent;
   position: relative;
+  backdrop-filter: blur(10px);
 }
 
 .history-item:hover {
-  background: var(--bg-tertiary);
-  border-color: var(--border-color);
+  background: var(--color-background-secondary);
+  border-color: var(--color-border);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
 }
 
 .history-item.active {
-  background: var(--primary-color);
-  color: white;
-  border-color: var(--primary-dark);
+  background: var(--gemini-gradient);
+  color: var(--color-text-inverse);
+  border-color: transparent;
+  box-shadow: var(--shadow-md);
 }
 
 .history-item.recent::before {
@@ -624,8 +646,8 @@ export default {
   transform: translateY(-50%);
   width: 3px;
   height: 20px;
-  background: var(--accent-color);
-  border-radius: 0 3px 3px 0;
+  background: var(--gemini-purple);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
 }
 
 .history-content {
@@ -634,9 +656,9 @@ export default {
 }
 
 .history-item .history-title {
-  font-size: 0.875rem;
-  font-weight: 600;
-  margin-bottom: 0.25rem;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: var(--space-1);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -645,13 +667,14 @@ export default {
 .history-meta {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.25rem;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
 }
 
 .history-date {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
 }
 
 .history-item.active .history-date {
@@ -659,21 +682,22 @@ export default {
 }
 
 .history-message-count {
-  font-size: 0.75rem;
-  color: var(--text-tertiary);
-  background: var(--bg-tertiary);
-  padding: 0.125rem 0.375rem;
-  border-radius: 0.25rem;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  background: var(--color-background-tertiary);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-lg);
+  font-weight: var(--font-weight-medium);
 }
 
 .history-item.active .history-message-count {
   background: rgba(255, 255, 255, 0.2);
-  color: white;
+  color: var(--color-text-inverse);
 }
 
 .history-preview {
-  font-size: 0.75rem;
-  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -725,82 +749,92 @@ export default {
 /* Context Menu */
 .context-menu {
   position: fixed;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: 0.5rem;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-  z-index: 1000;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  z-index: var(--z-popover);
   min-width: 150px;
-  padding: 0.5rem 0;
+  padding: var(--space-2) 0;
+  backdrop-filter: blur(20px);
 }
 
 .context-menu-item {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
   width: 100%;
-  padding: 0.5rem 1rem;
+  padding: var(--space-2) var(--space-4);
   border: none;
   background: transparent;
-  color: var(--text-primary);
-  font-size: 0.875rem;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: all var(--transition-fast);
+  font-family: var(--font-family-primary);
+  font-weight: var(--font-weight-medium);
 }
 
 .context-menu-item:hover {
-  background: var(--bg-tertiary);
+  background: var(--color-background-secondary);
+  transform: translateX(2px);
 }
 
 .context-menu-item.danger {
-  color: var(--error-color);
+  color: var(--color-error);
 }
 
 .context-menu-item.danger:hover {
-  background: var(--error-bg);
+  background: var(--error-50);
 }
 
 .context-menu-divider {
   border: none;
-  border-top: 1px solid var(--border-color);
-  margin: 0.5rem 0;
+  border-top: 1px solid var(--color-border-subtle);
+  margin: var(--space-2) 0;
 }
 
 /* Sidebar Footer */
 .sidebar-footer {
-  padding: 1rem;
-  border-top: 1px solid var(--border-color);
+  padding: var(--space-4);
+  border-top: 1px solid var(--color-border-subtle);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  background: var(--color-background-secondary);
 }
 
 .footer-stats {
   display: flex;
-  gap: 1rem;
+  gap: var(--space-4);
 }
 
 .stat-item {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
 }
 
-/* Responsive */
+/* Responsive Design */
 @media (max-width: 768px) {
   .sidebar {
     width: 280px;
   }
   
   .history-item .history-title {
-    font-size: 0.8rem;
+    font-size: var(--font-size-xs);
   }
   
   .sidebar-header {
-    padding: 1rem 0.75rem;
+    padding: var(--space-4) var(--space-3);
   }
   
   .sidebar-actions {
-    padding: 0.75rem;
+    padding: var(--space-3);
+  }
+  
+  .chat-history {
+    padding: var(--space-3) 0;
   }
 }
 
@@ -808,7 +842,34 @@ export default {
   .sidebar {
     width: 100%;
     position: fixed;
-    z-index: 100;
+    z-index: var(--z-fixed);
   }
+  
+  .app-title {
+    font-size: var(--font-size-lg);
+  }
+  
+  .sidebar-header {
+    padding: var(--space-3);
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .sidebar-header {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  }
+  
+  .sidebar-footer {
+    background: var(--neutral-800);
+  }
+}
+
+/* Accessibility improvements */
+.btn-icon:focus-visible,
+.search-input:focus-visible,
+.context-menu-item:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 </style> 

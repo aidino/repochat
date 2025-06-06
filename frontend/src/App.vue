@@ -298,11 +298,16 @@ export default {
 </script>
 
 <style scoped>
+/* Import Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap');
+
 .app-container {
   display: flex;
   width: 100vw;
   height: 100vh;
-  font-family: Inter, sans-serif;
+  font-family: var(--font-family-primary);
+  background: var(--color-background);
+  color: var(--color-text-primary);
 }
 
 
@@ -312,51 +317,57 @@ export default {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: var(--background-color);
+  background: var(--color-background);
 }
 
 .chat-header {
-  padding: 1rem 1.5rem;
-  background: var(--surface-color);
-  border-bottom: 1px solid var(--border-color);
+  padding: var(--space-4) var(--space-6);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border-subtle);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(10px);
 }
 
 .chat-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--text-primary);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  letter-spacing: -0.025em;
 }
 
 .chat-status {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--secondary-color);
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--color-text-tertiary);
+  animation: pulse 2s infinite;
 }
 
 .status-dot.online {
-  background: var(--success-color);
+  background: var(--color-success);
 }
 
 .status-text {
-  font-size: 0.875rem;
-  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
 }
 
 /* Messages Area */
 .messages-area {
   flex: 1;
   overflow-y: auto;
-  padding: 1rem;
+  padding: var(--space-4);
+  background: var(--gemini-gradient-light);
 }
 
 .messages-list {
@@ -366,9 +377,9 @@ export default {
 
 .message {
   display: flex;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-  animation: slideIn 0.3s ease;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  animation: slideIn var(--transition-normal) ease;
 }
 
 .message.user-message {
@@ -378,21 +389,22 @@ export default {
 .message-avatar {
   width: 40px;
   height: 40px;
-  border-radius: 50%;
-  background: var(--surface-color);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.2rem;
-  box-shadow: var(--shadow-sm);
+  font-size: var(--font-size-lg);
+  box-shadow: var(--shadow-md);
   flex-shrink: 0;
+  border: 2px solid var(--color-border-subtle);
 }
 
 .message-content {
   max-width: 70%;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: var(--space-1);
 }
 
 .user-message .message-content {
@@ -400,22 +412,26 @@ export default {
 }
 
 .message-text {
-  background: var(--surface-color);
-  padding: 0.75rem 1rem;
-  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-xl);
   box-shadow: var(--shadow-sm);
-  line-height: 1.5;
+  line-height: var(--line-height-relaxed);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--color-border-subtle);
 }
 
 .user-message .message-text {
-  background: var(--primary-color);
-  color: white;
+  background: var(--gemini-gradient);
+  color: var(--color-text-inverse);
+  border: none;
 }
 
 .message-time {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  padding: 0 0.5rem;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  padding: 0 var(--space-2);
+  font-weight: var(--font-weight-medium);
 }
 
 /* Welcome Message */
@@ -429,62 +445,76 @@ export default {
 
 .welcome-content {
   max-width: 500px;
-  padding: 2rem;
+  padding: var(--space-8);
+  background: var(--color-surface);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--color-border-subtle);
 }
 
 .welcome-content h2 {
-  font-size: 1.5rem;
-  margin-bottom: 1rem;
-  color: var(--text-primary);
+  font-size: var(--font-size-2xl);
+  margin-bottom: var(--space-4);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.025em;
 }
 
 .welcome-content p {
-  color: var(--text-secondary);
-  margin-bottom: 0.75rem;
-  line-height: 1.6;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-3);
+  line-height: var(--line-height-relaxed);
 }
 
 .example-questions {
-  margin-top: 2rem;
+  margin-top: var(--space-8);
 }
 
 .example-questions h4 {
-  margin-bottom: 1rem;
-  color: var(--text-primary);
+  margin-bottom: var(--space-4);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
 }
 
 .example-btn {
   display: block;
   width: 100%;
-  margin-bottom: 0.5rem;
-  padding: 0.75rem;
-  background: var(--surface-color);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
+  margin-bottom: var(--space-2);
+  padding: var(--space-3);
+  background: var(--color-background-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: all 0.15s ease;
-  color: var(--text-primary);
+  transition: all var(--transition-fast);
+  color: var(--color-text-primary);
   text-align: left;
+  font-family: var(--font-family-primary);
+  font-weight: var(--font-weight-medium);
 }
 
 .example-btn:hover {
-  background: var(--primary-color);
-  color: white;
+  background: var(--gemini-gradient);
+  color: var(--color-text-inverse);
   transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+  border-color: transparent;
 }
 
 /* Input Area */
 .input-area {
-  padding: 1rem 1.5rem;
-  background: var(--surface-color);
-  border-top: 1px solid var(--border-color);
+  padding: var(--space-4) var(--space-6);
+  background: rgba(255, 255, 255, 0.8);
+  border-top: 1px solid var(--color-border-subtle);
+  backdrop-filter: blur(20px);
+  box-shadow: var(--shadow-lg);
 }
 
 .input-container {
   max-width: 800px;
   margin: 0 auto;
   display: flex;
-  gap: 0.75rem;
+  gap: var(--space-3);
   align-items: flex-end;
 }
 
@@ -492,11 +522,23 @@ export default {
   flex: 1;
   min-height: 50px;
   resize: none;
+  border-radius: var(--radius-xl);
+  border: 2px solid var(--color-border);
+  padding: var(--space-4) var(--space-5);
+  font-family: var(--font-family-primary);
+  font-size: var(--font-size-base);
+  transition: all var(--transition-fast);
+}
+
+.message-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
 }
 
 .send-btn {
   min-width: 100px;
   height: 50px;
+  border-radius: var(--radius-xl);
 }
 
 .send-btn:disabled {
@@ -505,7 +547,7 @@ export default {
 }
 
 .icon {
-  font-size: 1rem;
+  font-size: var(--font-size-base);
 }
 
 /* Animations */
@@ -520,14 +562,67 @@ export default {
   }
 }
 
-/* Responsive */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Responsive Design */
 @media (max-width: 768px) {
   .message-content {
     max-width: 85%;
   }
   
   .input-container {
-    padding: 0 0.5rem;
+    padding: 0 var(--space-2);
+  }
+  
+  .chat-header {
+    padding: var(--space-3) var(--space-4);
+  }
+  
+  .messages-area {
+    padding: var(--space-3);
+  }
+  
+  .input-area {
+    padding: var(--space-3) var(--space-4);
+  }
+}
+
+@media (max-width: 480px) {
+  .welcome-content {
+    padding: var(--space-6);
+    margin: var(--space-4);
+  }
+  
+  .send-btn {
+    min-width: 80px;
+  }
+  
+  .message-avatar {
+    width: 32px;
+    height: 32px;
+    font-size: var(--font-size-base);
+  }
+}
+
+/* Accessibility improvements */
+.message-input:focus-visible,
+.example-btn:focus-visible,
+.send-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .input-area {
+    background: rgba(38, 38, 38, 0.8);
   }
 }
 </style> 
