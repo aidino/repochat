@@ -36,6 +36,8 @@
         :initial-messages="currentChatMessages"
         @send-message="handleSendMessage"
         @refresh-chat="handleRefreshChat"
+        @repository-scanned="handleRepositoryScanned"
+        @error="handleApiError"
         ref="chatInterface"
       />
     </template>
@@ -247,226 +249,103 @@ export default {
       }
     },
 
-    // === Message Handling ===
+    // === Chat Message Methods (Updated for API Integration) ===
     
-    async handleSendMessage(message) {
+    handleSendMessage(message) {
       if (!this.currentChatId) {
         this.handleNewChat();
       }
 
       const chat = this.chats.get(this.currentChatId);
-      if (!chat) return;
-
-      // Add user message
-      const userMessage = {
-        id: Date.now(),
-        text: message,
-        isUser: true,
-        timestamp: new Date()
-      };
-
-             chat.messages.push(userMessage);
-       chat.updatedAt = new Date();
-
-      // Generate title from first message
-      if (chat.messages.length === 1) {
-        chat.title = this.generateChatTitle(message);
+      if (!chat) {
+        console.error('Current chat not found');
+        return;
       }
 
-      // Simulate AI response with delay
-      setTimeout(() => {
-        const botMessage = {
-          id: Date.now() + 1,
-          text: this.generateAIResponse(message),
-          isUser: false,
-          timestamp: new Date()
-        };
-
-        chat.messages.push(botMessage);
-        chat.updatedAt = new Date();
-
-        console.log('Added bot response to chat:', this.currentChatId);
-      }, 1000 + Math.random() * 2000); // 1-3 second delay
+      // Message handling is now done in ChatInterface component
+      // This method is kept for backward compatibility
+      console.log('Message sent via ChatInterface:', message);
     },
 
     handleRefreshChat() {
-      if (this.currentChatId) {
-        const chat = this.chats.get(this.currentChatId);
-        if (chat && chat.messages.length > 0) {
-          // Get the last user message and regenerate response
-          const lastUserMessage = [...chat.messages].reverse().find(m => m.isUser);
-          if (lastUserMessage) {
-            // Remove last bot message if exists
-            const lastBotIndex = chat.messages.findLastIndex(m => !m.isUser);
-            if (lastBotIndex > -1) {
-              chat.messages.splice(lastBotIndex, 1);
-            }
+      if (!this.currentChatId) return;
 
-            // Generate new response
-            setTimeout(() => {
-              const botMessage = {
-                id: Date.now(),
-                text: this.generateAIResponse(lastUserMessage.text),
-                isUser: false,
-                timestamp: new Date()
-              };
-
-              chat.messages.push(botMessage);
-              chat.updatedAt = new Date();
-
-              console.log('Refreshed chat response:', this.currentChatId);
-            }, 1000);
-          }
-        }
+      const chat = this.chats.get(this.currentChatId);
+      if (chat) {
+        chat.messages = [];
+        chat.updatedAt = new Date();
+        console.log('Refreshed chat:', this.currentChatId);
       }
     },
 
-    generateAIResponse(message) {
-      // Mock AI responses với nội dung thực tế hữu ích
-      const responses = {
-        'kiến trúc': `🏗️ **Phân tích Kiến trúc Dự án**
-
-Dựa trên codebase đã scan, đây là phân tích kiến trúc tổng quan:
-
-**📋 Cấu trúc Dự án:**
-- **Frontend**: Vue.js 3 với Composition API
-- **Backend**: Python FastAPI với multi-agent architecture  
-- **Database**: Neo4j cho Code Knowledge Graph
-- **Containerization**: Docker với multi-stage builds
-
-**✅ Điểm Mạnh:**
-- Clean separation of concerns với TEAM-based architecture
-- Comprehensive logging và monitoring
-- Production-ready Docker setup
-- Modern frontend với responsive design
-
-**⚠️ Cần Cải thiện:**
-- API documentation có thể detailed hơn
-- Error handling ở một số endpoints
-- Test coverage cho integration scenarios
-
-**🚀 Khuyến nghị:**
-1. Implement comprehensive API docs với OpenAPI/Swagger
-2. Add more integration tests cho multi-agent workflows  
-3. Consider implementing caching layer cho better performance`,
-
-        'bảo mật': `🔒 **Security Audit Report**
-
-Sau khi scan codebase, tôi tìm thấy các vấn đề bảo mật:
-
-**🔴 Critical:**
-- API endpoints thiếu input validation
-- Chưa implement CSRF protection
-- Missing rate limiting cho API calls
-
-**🟡 Medium:**
-- XSS prevention cần được strengthen
-- JWT tokens không có proper expiration handling
-- File upload validation chưa đầy đủ
-
-**🔧 Khuyến nghị:**
-1. Implement \`express-validator\` cho API validation
-2. Add \`csurf\` middleware cho CSRF protection  
-3. Use \`express-rate-limit\` cho API rate limiting
-4. Sanitize user inputs với \`DOMPurify\``,
-
-        'performance': `⚡ **Performance Analysis**
-
-Dựa trên phân tích, đây là các tối ưu được đề xuất:
-
-**📦 Bundle Optimization:**
-- Hiện tại bundle size: ~2.3MB
-- Có thể giảm xuống ~800KB với các tối ưu sau:
-
-**🎯 Immediate Actions:**
-1. **Code Splitting**: Implement dynamic imports cho routes
-   \`\`\`javascript
-   const Settings = () => import('./views/Settings.vue')
-   \`\`\`
-
-2. **Tree Shaking**: Remove unused CSS và JS code
-3. **Image Optimization**: Convert to WebP format (30-50% size reduction)
-4. **Lazy Loading**: Components và images off-screen
-
-**📊 Expected Results:**
-- Load time: 2.1s → 0.8s  
-- Bundle size: 2.3MB → 800KB
-- Core Web Vitals: All green scores`,
-
-        'standards': `📋 **Code Standards Review**
-
-**✅ Following Best Practices:**
-- Consistent naming conventions (camelCase, PascalCase)
-- Proper component structure với single responsibility
-- ESLint rules được tuân thủ tốt
-- Git commit messages theo conventional format
-
-**⚠️ Areas for Improvement:**
-
-**TypeScript Integration:**
-\`\`\`typescript
-// Current: Plain JavaScript
-export default {
-  name: 'Component'
-}
-
-// Recommended: TypeScript
-export default defineComponent({
-  name: 'Component'
-}) as DefineComponent
-\`\`\`
-
-**Documentation:**
-- JSDoc comments cho functions
-- Component props documentation
-- API endpoint documentation
-
-**Testing Coverage:**
-- Current: ~45% coverage
-- Target: 80%+ coverage
-- Missing: Edge cases và error scenarios`
-      };
-
-      // Find matching response based on keywords
-      for (const [keyword, response] of Object.entries(responses)) {
-        if (message.toLowerCase().includes(keyword)) {
-          return response;
-        }
-      }
-
-      // Default intelligent response
-      return `Tôi đã nhận được câu hỏi: "${message}"
-
-Để có thể trả lời chính xác và hữu ích hơn, bạn có thể cung cấp thêm thông tin về:
-
-🔹 **Ngôn ngữ/Framework**: JavaScript, Python, Vue.js, React, etc.
-🔹 **Loại phân tích**: Security audit, performance review, code quality
-🔹 **Scope**: Specific files, components, hoặc toàn bộ project
-🔹 **Repository URL**: Để tôi có thể clone và phân tích chi tiết
-
-**Ví dụ câu hỏi tốt:**
-- "Phân tích security cho Vue.js project tại https://github.com/user/repo"
-- "Review performance của React components trong folder /src/components"
-- "Tìm code smells trong Python backend API"
-
-Hãy thử lại với thông tin cụ thể hơn! 🚀`;
-    },
-
-    // === Helper Methods ===
+    // === API Error Handling ===
     
-    generateChatTitle(message) {
-      // Generate meaningful chat title from first message
-      const cleanMessage = message.trim().toLowerCase();
+    handleApiError(error) {
+      console.error('API Error occurred:', error);
       
-      if (cleanMessage.includes('phân tích')) return 'Phân tích dự án';
-      if (cleanMessage.includes('bảo mật') || cleanMessage.includes('security')) return 'Security audit';
-      if (cleanMessage.includes('performance')) return 'Performance review';
-      if (cleanMessage.includes('review') || cleanMessage.includes('code')) return 'Code review';
-      if (cleanMessage.includes('bug') || cleanMessage.includes('lỗi')) return 'Bug investigation';
+      // Show user-friendly error notification
+      this.showErrorNotification(
+        'Đã xảy ra lỗi kết nối. Vui lòng kiểm tra kết nối mạng và thử lại.'
+      );
+    },
+
+    handleRepositoryScanned(result) {
+      console.log('Repository scan completed:', result);
       
-      // Fallback: use first few words
-      const words = message.split(' ').slice(0, 4).join(' ');
-      return words.length > 30 ? words.substring(0, 30) + '...' : words;
+      // Update current chat title to reflect repository
+      if (this.currentChatId && result.repository_url) {
+        const chat = this.chats.get(this.currentChatId);
+        if (chat) {
+          // Extract repo name from URL for better title
+          const repoName = this.extractRepoName(result.repository_url);
+          chat.title = `Phân tích: ${repoName}`;
+          chat.updatedAt = new Date();
+          
+          console.log('Updated chat title:', chat.title);
+        }
+      }
+
+      // Show success notification
+      this.showSuccessNotification(
+        'Repository đã được quét thành công! Bạn có thể bắt đầu hỏi câu hỏi về code.'
+      );
+    },
+
+    // === Utility Methods ===
+    
+    extractRepoName(repositoryUrl) {
+      try {
+        // Extract repo name from GitHub/GitLab URL
+        const match = repositoryUrl.match(/[\/:]([^\/]+)\/([^\/]+)(?:\.git)?$/);
+        if (match) {
+          return `${match[1]}/${match[2].replace(/\.git$/, '')}`;
+        }
+        return 'Repository';
+      } catch (error) {
+        return 'Repository';
+      }
+    },
+
+    showErrorNotification(message) {
+      // Simple notification system - can be enhanced later
+      console.error('ERROR:', message);
+      
+      // You can integrate with a toast notification library here
+      // For now, we'll use browser alert as fallback
+      if (window.confirm) {
+        alert(`❌ ${message}`);
+      }
+    },
+
+    showSuccessNotification(message) {
+      // Simple notification system - can be enhanced later
+      console.log('SUCCESS:', message);
+      
+      // You can integrate with a toast notification library here
+      // For now, we'll use browser alert as fallback
+      if (window.confirm) {
+        alert(`✅ ${message}`);
+      }
     },
 
     // === Lifecycle Methods ===

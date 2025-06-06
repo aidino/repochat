@@ -1,0 +1,135 @@
+# RepoChat v1.0 Production Environment
+# Docker Compose override for production deployment
+# Use with: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+  # Neo4j Production Configuration
+  neo4j:
+    environment:
+      - NEO4J_dbms_memory_heap_initial__size=1g
+      - NEO4J_dbms_memory_heap_max__size=4g
+      - NEO4J_dbms_memory_pagecache_size=2g
+      - NEO4J_dbms_logs_debug_level=WARN
+    deploy:
+      resources:
+        limits:
+          memory: 6g
+          cpus: '2.0'
+        reservations:
+          memory: 2g
+          cpus: '0.5'
+
+  # Backend Production Configuration
+  backend:
+    build:
+      target: production
+    environment:
+      - ENVIRONMENT=production
+      - DEBUG=false
+      - LOG_LEVEL=INFO
+      - MAX_WORKERS=8
+      - WORKER_TIMEOUT=600
+      - MAX_CONCURRENT_REQUESTS=1000
+    ports:
+      - "8000:8000"  # Remove debug port in production
+    volumes:
+      # Only mount necessary production volumes
+      - ./logs:/app/logs
+      - ./temp:/app/temp
+      # Remove source code mount for security
+    deploy:
+      resources:
+        limits:
+          memory: 4g
+          cpus: '2.0'
+        reservations:
+          memory: 1g
+          cpus: '0.5'
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+
+  # Frontend Production Configuration
+  frontend:
+    build:
+      target: production
+    environment:
+      - NODE_ENV=production
+      - VITE_API_BASE_URL=http://localhost:8000
+      - VITE_APP_TITLE=RepoChat v1.0
+      - VITE_ENVIRONMENT=production
+    ports:
+      - "80:80"      # Standard HTTP port
+      - "443:443"    # HTTPS port (if SSL configured)
+    volumes:
+      # Remove source code mount in production
+      - ./nginx/ssl:/etc/nginx/ssl:ro  # SSL certificates
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: '1.0'
+        reservations:
+          memory: 128m
+          cpus: '0.25'
+
+  # Redis Production Configuration
+  redis:
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-repochat-redis-password}
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-repochat-redis-password}
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: '1.0'
+        reservations:
+          memory: 256m
+          cpus: '0.25'
+
+  # Production Monitoring (Optional)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: repochat-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - repochat-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: '0.5'
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: repochat-grafana
+    ports:
+      - "3001:3000"  # Different port to avoid conflict
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin123}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana:/etc/grafana/provisioning:ro
+    networks:
+      - repochat-network
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: '0.5'
+
+# Production volumes
+volumes:
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local 

@@ -28,29 +28,41 @@ RepoChat là một trợ lý AI thông minh được thiết kế để phân t�
 git clone <repository-url>
 cd repochat
 
-# Setup và start development environment
-./scripts/setup-dev.sh
+# Setup environment file
+cp env.template .env
+# Edit .env với API keys của bạn (optional)
+
+# Start development environment
+./start-docker.sh -d
 
 # ✅ Tất cả services sẽ được setup tự động:
-# - Neo4j database (localhost:7474)
+# - Frontend Vue.js (localhost:3000)
 # - Backend API (localhost:8000) 
-# - Health checks và testing
+# - Neo4j database (localhost:7474)
+# - Redis cache (localhost:6379)
 ```
 
 ### Verify Installation
 
 ```bash
-# Check services
-docker-compose ps
+# Quick test all services
+./test-docker.sh
 
-# Test API
-curl http://localhost:8000/health
-curl http://localhost:8000/
-
-# Access Neo4j Browser
-open http://localhost:7474
-# Username: neo4j, Password: repochat123
+# Or manual verification:
+docker-compose ps                      # Check services status
+curl http://localhost:8000/health      # Backend health
+curl http://localhost:3000             # Frontend
+open http://localhost:7474             # Neo4j Browser (neo4j/repochat123)
 ```
+
+### Service URLs
+
+| Service | URL | Credentials |
+|---------|-----|-------------|
+| 🌐 Frontend | http://localhost:3000 | - |
+| 🔧 Backend API | http://localhost:8000 | - |
+| 🗃️ Neo4j Browser | http://localhost:7474 | neo4j/repochat123 |
+| 📊 Redis | localhost:6379 | - |
 
 ## 🏗️ Architecture Overview
 
@@ -79,10 +91,12 @@ open http://localhost:7474
 
 ```bash
 # Start all services
-docker-compose up -d
+./start-docker.sh -d
 
 # Monitor logs
-docker-compose logs -f backend
+docker-compose logs -f backend    # Backend logs
+docker-compose logs -f frontend   # Frontend logs
+docker-compose logs -f            # All services
 
 # Hot reload enabled - edit code và changes sẽ tự động reflect
 
@@ -90,7 +104,26 @@ docker-compose logs -f backend
 docker-compose exec backend python -m pytest tests/ -v
 
 # Stop services
-docker-compose down
+./stop-docker.sh
+# Or force cleanup: ./stop-docker.sh -c
+```
+
+### Management Scripts
+
+```bash
+# Start services
+./start-docker.sh              # Interactive mode
+./start-docker.sh -d           # Detached mode
+./start-docker.sh -p -d        # Production mode
+./start-docker.sh -s "neo4j backend"  # Specific services
+
+# Stop services
+./stop-docker.sh               # Normal stop
+./stop-docker.sh -c            # Cleanup containers
+./stop-docker.sh -v            # Remove data (WARNING!)
+
+# Test setup
+./test-docker.sh               # Comprehensive testing
 ```
 
 ### API Testing

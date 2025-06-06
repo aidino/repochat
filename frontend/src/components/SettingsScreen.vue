@@ -20,7 +20,7 @@
           <button 
             class="btn btn-secondary"
             @click="resetToDefaults"
-            :disabled="isSaving"
+            :disabled="loading"
           >
             <span class="icon">🔄</span>
             Mặc định
@@ -28,6 +28,19 @@
         </div>
       </div>
     </header>
+
+    <!-- Loading Banner -->
+    <div v-if="loading" class="loading-banner">
+      <span class="icon">⏳</span>
+      <span>Đang tải cài đặt...</span>
+    </div>
+
+    <!-- Error Banner -->
+    <div v-if="error" class="error-banner">
+      <span class="icon">❌</span>
+      <span>{{ error }}</span>
+      <button @click="clearError" class="btn-link">Đóng</button>
+    </div>
 
     <!-- Settings Content -->
     <main class="settings-content">
@@ -64,7 +77,7 @@
                   id="nlu-model"
                   v-model="settings.nluModel"
                   class="model-select"
-                  :disabled="isSaving"
+                  :disabled="loading"
                   @change="markAsModified"
                 >
                   <option 
@@ -101,7 +114,7 @@
                   id="code-analysis-model"
                   v-model="settings.codeAnalysisModel"
                   class="model-select"
-                  :disabled="isSaving"
+                  :disabled="loading"
                   @change="markAsModified"
                 >
                   <option 
@@ -138,7 +151,7 @@
                   id="report-model"
                   v-model="settings.reportGenerationModel"
                   class="model-select"
-                  :disabled="isSaving"
+                  :disabled="loading"
                   @change="markAsModified"
                 >
                   <option 
@@ -152,6 +165,71 @@
                 <div class="model-info">
                   <span class="model-provider">{{ getModelInfo(settings.reportGenerationModel).provider }}</span>
                   <span class="model-cost">{{ getModelInfo(settings.reportGenerationModel).cost }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Theme Setting -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="theme-select">
+                  🎨 Giao Diện
+                </label>
+                <p class="setting-description">
+                  Chọn theme cho giao diện ứng dụng
+                </p>
+                <div class="setting-meta">
+                  <span class="setting-team">TEAM: Frontend</span>
+                  <span class="setting-usage">Sử dụng: Màu sắc và hiển thị giao diện</span>
+                </div>
+              </div>
+              <div class="setting-control">
+                <select 
+                  id="theme-select"
+                  v-model="settings.theme"
+                  class="model-select"
+                  :disabled="loading"
+                  @change="markAsModified"
+                >
+                  <option value="dark">Tối (Dark)</option>
+                  <option value="light">Sáng (Light)</option>
+                  <option value="auto">Tự động (Auto)</option>
+                </select>
+                <div class="model-info">
+                  <span class="model-provider">Giao diện</span>
+                  <span class="model-cost">Miễn phí</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Language Setting -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="language-select">
+                  🌐 Ngôn Ngữ
+                </label>
+                <p class="setting-description">
+                  Chọn ngôn ngữ hiển thị cho ứng dụng
+                </p>
+                <div class="setting-meta">
+                  <span class="setting-team">TEAM: Frontend</span>
+                  <span class="setting-usage">Sử dụng: Hiển thị text và messages</span>
+                </div>
+              </div>
+              <div class="setting-control">
+                <select 
+                  id="language-select"
+                  v-model="settings.language"
+                  class="model-select"
+                  :disabled="loading"
+                  @change="markAsModified"
+                >
+                  <option value="vi">Tiếng Việt</option>
+                  <option value="en">English</option>
+                </select>
+                <div class="model-info">
+                  <span class="model-provider">Bản địa hóa</span>
+                  <span class="model-cost">Miễn phí</span>
                 </div>
               </div>
             </div>
@@ -178,7 +256,7 @@
           <button 
             class="btn btn-secondary"
             @click="discardChanges"
-            :disabled="!hasModifications || isSaving"
+            :disabled="!hasModifications || loading"
           >
             <span class="icon">↶</span>
             Hủy thay đổi
@@ -187,256 +265,323 @@
           <button 
             class="btn btn-primary save-btn"
             @click="saveSettings"
-            :disabled="!hasModifications || isSaving"
-            :class="{ 'saving': isSaving }"
+            :disabled="!hasModifications || loading"
+            :class="{ 'saving': loading }"
           >
-            <span class="icon">{{ isSaving ? '⏳' : '💾' }}</span>
-            {{ isSaving ? 'Đang lưu...' : 'Lưu cài đặt' }}
+            <span class="icon">{{ loading ? '⏳' : '💾' }}</span>
+            {{ loading ? 'Đang lưu...' : 'Lưu cài đặt' }}
           </button>
         </div>
       </div>
     </footer>
 
     <!-- Success Toast -->
-    <div v-if="showSuccessToast" class="toast toast-success">
-      <span class="toast-icon">✅</span>
-      <span class="toast-message">Cài đặt đã được lưu thành công!</span>
+    <div v-if="showSuccessToast" class="success-toast animate-slide-in-right">
+      <span class="icon">✅</span>
+      <span>Cài đặt đã được lưu thành công!</span>
     </div>
 
   </div>
 </template>
 
 <script>
+import { useSettings } from '../composables/useApi.js'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
+
 export default {
   name: 'SettingsScreen',
   
-  emits: [
-    'go-back',
-    'settings-saved'
-  ],
-  
-  data() {
-    return {
-      // Settings state
-      settings: {
-        nluModel: 'gpt-4o-mini',
-        codeAnalysisModel: 'gpt-4-turbo',
-        reportGenerationModel: 'gpt-4o-mini'
+  emits: ['go-back', 'settings-saved'],
+
+  setup(props, { emit }) {
+    // Settings API
+    const {
+      loading,
+      error,
+      settings,
+      loadSettings,
+      saveSettings: saveToDatabase,
+      clearError
+    } = useSettings()
+
+    // Local state for tracking modifications
+    const originalSettings = ref({})
+    const hasModifications = ref(false)
+    const lastSavedTime = ref(null)
+    const showSuccessToast = ref(false)
+
+    // Available LLM models
+    const availableModels = ref([
+      {
+        id: 'gpt-4',
+        name: 'GPT-4 (OpenAI)',
+        provider: 'OpenAI',
+        cost: '$0.03/1K tokens'
       },
-      
-      // Original settings for comparison
-      originalSettings: {},
-      
-      // UI state
-      isSaving: false,
-      hasModifications: false,
-      lastSavedTime: null,
-      showSuccessToast: false,
-      
-      // Available LLM models (hardcoded as per DoD)
-      availableModels: [
-        {
-          id: 'gpt-4o-mini',
-          name: 'GPT-4O Mini',
-          provider: 'OpenAI',
-          cost: 'Thấp'
-        },
-        {
-          id: 'gpt-4-turbo',
-          name: 'GPT-4 Turbo',
-          provider: 'OpenAI',
-          cost: 'Trung bình'
-        },
-        {
-          id: 'gpt-4',
-          name: 'GPT-4',
-          provider: 'OpenAI',
-          cost: 'Cao'
-        },
-        {
-          id: 'claude-3-haiku',
-          name: 'Claude 3 Haiku',
-          provider: 'Anthropic',
-          cost: 'Thấp'
-        },
-        {
-          id: 'claude-3-sonnet',
-          name: 'Claude 3 Sonnet',
-          provider: 'Anthropic',
-          cost: 'Trung bình'
-        }
-      ]
+      {
+        id: 'gpt-3.5-turbo',
+        name: 'GPT-3.5 Turbo (OpenAI)',
+        provider: 'OpenAI',
+        cost: '$0.002/1K tokens'
+      },
+      {
+        id: 'claude-3-opus',
+        name: 'Claude 3 Opus (Anthropic)',
+        provider: 'Anthropic',
+        cost: '$15/1M tokens'
+      },
+      {
+        id: 'claude-3-sonnet',
+        name: 'Claude 3 Sonnet (Anthropic)',
+        provider: 'Anthropic',
+        cost: '$3/1M tokens'
+      },
+      {
+        id: 'gemini-pro',
+        name: 'Gemini Pro (Google)',
+        provider: 'Google',
+        cost: '$0.5/1M tokens'
+      },
+      {
+        id: 'ollama-llama2',
+        name: 'Llama 2 (Local)',
+        provider: 'Ollama',
+        cost: 'Miễn phí'
+      }
+    ])
+
+    // Computed
+    const getModelInfo = (modelId) => {
+      const model = availableModels.value.find(m => m.id === modelId)
+      return model || { provider: 'Unknown', cost: 'N/A' }
     }
-  },
-  
-  mounted() {
-    // Initialize settings
-    this.loadSettings()
-    this.originalSettings = { ...this.settings }
-  },
-  
-  methods: {
-    // === Core Actions ===
-    handleGoBack() {
-      if (this.hasModifications) {
-        const confirmLeave = confirm('Bạn có thay đổi chưa lưu. Bạn có chắc muốn thoát?')
+
+    // Methods
+    const markAsModified = () => {
+      hasModifications.value = true
+    }
+
+    const handleGoBack = () => {
+      if (hasModifications.value) {
+        const confirmLeave = confirm('Bạn có thay đổi chưa lưu. Bạn có chắc muốn rời khỏi trang này?')
         if (!confirmLeave) return
       }
       
-      this.$emit('go-back')
-    },
-    
-    saveSettings() {
-      this.isSaving = true
-      
-      // Simulate API call delay
-      setTimeout(() => {
-        try {
-          // Create settings object for logging (DoD requirement)
-          const configToSave = {
-            llmModels: {
-              nlu: this.settings.nluModel,
-              codeAnalysis: this.settings.codeAnalysisModel,
-              reportGeneration: this.settings.reportGenerationModel
-            },
-            timestamp: new Date().toISOString(),
-            userId: 'user_001' // Mock user ID
-          }
-          
-          // Log to console as per DoD requirement
-          console.log('🎯 RepoChat LLM Configuration Saved:', configToSave)
-          console.table({
-            'NLU Model': this.getModelInfo(this.settings.nluModel).name,
-            'Code Analysis Model': this.getModelInfo(this.settings.codeAnalysisModel).name,
-            'Report Generation Model': this.getModelInfo(this.settings.reportGenerationModel).name
-          })
-          
-          // Update state
-          this.originalSettings = { ...this.settings }
-          this.hasModifications = false
-          this.lastSavedTime = new Date()
-          this.isSaving = false
-          
-          // Show success feedback
-          this.showSuccessToast = true
-          setTimeout(() => {
-            this.showSuccessToast = false
-          }, 3000)
-          
-          // Emit event for parent component
-          this.$emit('settings-saved', configToSave)
-          
-          // Save to localStorage for persistence
-          localStorage.setItem('repochat_settings', JSON.stringify(this.settings))
-          
-        } catch (error) {
-          console.error('Error saving settings:', error)
-          this.isSaving = false
-        }
-      }, 1500) // Simulate network delay
-    },
-    
-    resetToDefaults() {
-      const confirmReset = confirm('Bạn có chắc muốn reset về cài đặt mặc định?')
+      emit('go-back')
+    }
+
+    const resetToDefaults = async () => {
+      const confirmReset = confirm('Bạn có chắc muốn khôi phục về cài đặt mặc định?')
       if (!confirmReset) return
+
+      // Reset to default values
+      settings.nluModel = 'gpt-3.5-turbo'
+      settings.codeAnalysisModel = 'gpt-4'
+      settings.reportGenerationModel = 'gpt-3.5-turbo'
+      settings.theme = 'dark'
+      settings.language = 'vi'
       
-      this.settings = {
-        nluModel: 'gpt-4o-mini',
-        codeAnalysisModel: 'gpt-4-turbo',
-        reportGenerationModel: 'gpt-4o-mini'
-      }
-      
-      this.markAsModified()
-      console.log('🔄 Settings reset to defaults')
-    },
-    
-    discardChanges() {
+      markAsModified()
+    }
+
+    const discardChanges = async () => {
       const confirmDiscard = confirm('Bạn có chắc muốn hủy tất cả thay đổi?')
       if (!confirmDiscard) return
-      
-      this.settings = { ...this.originalSettings }
-      this.hasModifications = false
-      console.log('↶ Changes discarded')
-    },
-    
-    // === Settings Management ===
-    loadSettings() {
+
+      // Reload settings from server
+      await loadSettings()
+      hasModifications.value = false
+    }
+
+    const saveSettings = async () => {
       try {
-        const saved = localStorage.getItem('repochat_settings')
-        if (saved) {
-          const parsedSettings = JSON.parse(saved)
-          this.settings = { ...this.settings, ...parsedSettings }
-          console.log('📂 Settings loaded from localStorage')
+        const result = await saveToDatabase(settings)
+        
+        if (result) {
+          hasModifications.value = false
+          lastSavedTime.value = new Date()
+          
+          // Show success toast
+          showSuccessToast.value = true
+          setTimeout(() => {
+            showSuccessToast.value = false
+          }, 3000)
+          
+          // Emit event
+          emit('settings-saved', settings)
+          
+          console.log('Settings saved successfully:', result)
         }
-      } catch (error) {
-        console.warn('Could not load settings from localStorage:', error)
+      } catch (err) {
+        console.error('Failed to save settings:', err)
+        // Error message sẽ được hiển thị qua error banner
       }
-    },
-    
-    markAsModified() {
-      this.hasModifications = JSON.stringify(this.settings) !== JSON.stringify(this.originalSettings)
-    },
-    
-    // === Utility Functions ===
-    getModelInfo(modelId) {
-      return this.availableModels.find(model => model.id === modelId) || this.availableModels[0]
-    },
-    
-    formatTime(date) {
-      return date.toLocaleTimeString('vi-VN', {
+    }
+
+    const formatTime = (timestamp) => {
+      if (!timestamp) return ''
+      
+      const now = new Date()
+      const time = new Date(timestamp)
+      const diffMs = now - time
+      const diffMins = Math.floor(diffMs / 60000)
+      const diffHours = Math.floor(diffMs / 3600000)
+
+      if (diffMins < 1) return 'vừa xong'
+      if (diffMins < 60) return `${diffMins} phút trước`
+      if (diffHours < 24) return `${diffHours} giờ trước`
+      
+      return time.toLocaleDateString('vi-VN', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
         hour: '2-digit',
         minute: '2-digit'
       })
+    }
+
+    // Watch for settings changes to track modifications
+    watch(() => ({ ...settings }), (newSettings, oldSettings) => {
+      if (oldSettings && Object.keys(oldSettings).length > 0) {
+        const hasChanged = Object.keys(newSettings).some(key => 
+          newSettings[key] !== originalSettings.value[key]
+        )
+        hasModifications.value = hasChanged
+      }
+    }, { deep: true })
+
+    // Lifecycle
+    onMounted(async () => {
+      try {
+        await loadSettings()
+        // Store original settings for modification tracking
+        originalSettings.value = { ...settings }
+        hasModifications.value = false
+      } catch (err) {
+        console.error('Failed to load settings:', err)
+        // Error sẽ được hiển thị qua error banner
+      }
+    })
+
+    return {
+      // API state
+      loading,
+      error,
+      settings,
+      clearError,
+      
+      // Local state
+      hasModifications,
+      lastSavedTime,
+      showSuccessToast,
+      availableModels,
+      
+      // Computed
+      getModelInfo,
+      
+      // Methods
+      markAsModified,
+      handleGoBack,
+      resetToDefaults,
+      discardChanges,
+      saveSettings,
+      formatTime
     }
   }
 }
 </script>
 
 <style scoped>
-/* Settings Screen - Gemini-Inspired Design */
+/* Loading Banner */
+.loading-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: rgba(102, 126, 234, 0.1);
+  border-left: 4px solid var(--color-primary);
+  color: var(--color-text-primary);
+}
+
+/* Error Banner */
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: rgba(255, 0, 0, 0.1);
+  border-left: 4px solid red;
+  color: var(--color-text-primary);
+}
+
+/* Button Link */
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: inherit;
+}
+
+.btn-link:hover {
+  color: var(--color-primary-hover);
+}
+
+/* Success Toast */
+.success-toast {
+  position: fixed;
+  top: var(--space-4);
+  right: var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: rgba(0, 255, 0, 0.1);
+  border: 1px solid rgba(0, 255, 0, 0.3);
+  border-radius: var(--border-radius-md);
+  color: var(--color-text-primary);
+  z-index: 1000;
+  box-shadow: var(--shadow-lg);
+}
+
+/* Existing styles would remain the same */
 .settings-screen {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--gradient-secondary);
-  font-family: var(--font-family-primary);
+  background: var(--color-background);
   color: var(--color-text-primary);
-  overflow: hidden;
 }
 
-/* Header */
 .settings-header {
-  background: var(--gradient-primary);
-  color: var(--color-text-inverse);
-  padding: var(--space-6) var(--space-8);
   flex-shrink: 0;
-  box-shadow: var(--shadow-lg);
+  padding: var(--space-4) var(--space-6);
+  background: var(--color-surface);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .header-content {
-  max-width: 1200px;
-  margin: 0 auto;
   display: flex;
   align-items: center;
   gap: var(--space-4);
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .back-btn {
-  font-size: var(--font-size-lg);
   padding: var(--space-2);
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  color: var(--color-text-inverse);
-  border-radius: var(--radius-xl);
-  transition: all var(--transition-fast);
-  backdrop-filter: blur(10px);
+  border-radius: var(--border-radius-md);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .back-btn:hover {
-  background: rgba(255, 255, 255, 0.25);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateX(-2px);
 }
 
 .header-text {
@@ -444,30 +589,27 @@ export default {
 }
 
 .settings-title {
-  font-size: var(--font-size-2xl);
+  font-size: var(--font-size-xl);
   font-weight: var(--font-weight-bold);
-  color: var(--color-text-inverse);
   margin: 0 0 var(--space-1) 0;
-  letter-spacing: -0.025em;
+  color: var(--color-text-primary);
 }
 
 .settings-subtitle {
-  color: rgba(255, 255, 255, 0.8);
-  margin: 0;
   font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-normal);
+  color: var(--color-text-secondary);
+  margin: 0;
 }
 
 .header-actions {
   display: flex;
-  gap: var(--space-3);
+  gap: var(--space-2);
 }
 
-/* Content */
 .settings-content {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-8);
+  padding: var(--space-6);
 }
 
 .settings-container {
@@ -475,9 +617,11 @@ export default {
   margin: 0 auto;
 }
 
-/* Sections */
 .settings-section {
-  margin-bottom: var(--space-12);
+  background: var(--color-surface);
+  border-radius: var(--border-radius-lg);
+  padding: var(--space-6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .section-header {
@@ -485,62 +629,50 @@ export default {
 }
 
 .section-title {
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text-primary);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
   margin: 0 0 var(--space-2) 0;
-  letter-spacing: -0.025em;
+  color: var(--color-text-primary);
 }
 
 .section-description {
+  font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
+  line-height: 1.6;
   margin: 0;
-  line-height: var(--line-height-relaxed);
 }
 
-/* Settings Grid */
 .settings-grid {
   display: grid;
   gap: var(--space-6);
 }
 
 .setting-item {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-2xl);
-  padding: var(--space-6);
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: var(--space-6);
-  align-items: start;
-  transition: all var(--transition-normal);
-  box-shadow: var(--shadow-sm);
-  backdrop-filter: blur(20px);
-}
-
-.setting-item:hover {
-  border-color: var(--color-primary);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
+  display: flex;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--border-radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .setting-info {
-  min-width: 0;
+  flex: 1;
 }
 
 .setting-label {
+  display: block;
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
   margin-bottom: var(--space-2);
-  display: block;
+  color: var(--color-text-primary);
 }
 
 .setting-description {
-  color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.5;
   margin-bottom: var(--space-3);
-  line-height: var(--line-height-normal);
 }
 
 .setting-meta {
@@ -549,93 +681,59 @@ export default {
   gap: var(--space-1);
 }
 
-.setting-team,
-.setting-usage {
+.setting-team, .setting-usage {
   font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
 }
 
-.setting-team {
-  font-weight: var(--font-weight-medium);
-}
-
-/* Controls */
 .setting-control {
-  min-width: 200px;
+  flex-shrink: 0;
+  width: 280px;
 }
 
 .model-select {
   width: 100%;
-  padding: var(--space-4) var(--space-5);
-  border: 2px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  background: var(--color-surface);
-  font-size: var(--font-size-base);
+  padding: var(--space-3);
+  background: var(--color-background);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--border-radius-md);
   color: var(--color-text-primary);
-  transition: all var(--transition-fast);
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23B6B09F' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
-  background-position: right var(--space-4) center;
-  background-repeat: no-repeat;
-  background-size: 1.5em 1.5em;
-  padding-right: calc(var(--space-10) + var(--space-2));
-  font-family: var(--font-family-primary);
-  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
 }
 
 .model-select:focus {
   outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(182, 176, 159, 0.2);
-}
-
-.model-select:hover {
-  border-color: var(--color-border-strong);
-  background-color: var(--color-background-secondary);
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
 }
 
 .model-select:disabled {
-  opacity: 0.5;
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
 .model-info {
   display: flex;
   justify-content: space-between;
-  margin-top: var(--space-3);
+  margin-top: var(--space-2);
   font-size: var(--font-size-xs);
-  padding: var(--space-3);
-  background: var(--color-background-secondary);
-  border-radius: var(--radius-lg);
-  border-left: 4px solid var(--color-primary);
-}
-
-.model-provider {
-  color: var(--color-primary);
-  font-weight: var(--font-weight-semibold);
-}
-
-.model-cost {
   color: var(--color-text-tertiary);
-  font-weight: var(--font-weight-medium);
 }
 
-/* Footer */
 .settings-footer {
-  background: rgba(255, 255, 255, 0.8);
-  border-top: 1px solid var(--color-border-subtle);
-  padding: var(--space-6) var(--space-8);
   flex-shrink: 0;
-  box-shadow: var(--shadow-lg);
-  backdrop-filter: blur(20px);
+  padding: var(--space-4) var(--space-6);
+  background: var(--color-surface);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .footer-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   max-width: 1200px;
   margin: 0 auto;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
 }
 
 .footer-info {
@@ -647,11 +745,10 @@ export default {
 .save-status {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
-  color: var(--color-success);
 }
 
 .save-status.has-changes {
-  color: var(--color-warning);
+  color: orange;
 }
 
 .last-saved {
@@ -661,47 +758,45 @@ export default {
 
 .footer-actions {
   display: flex;
-  gap: var(--space-4);
+  gap: var(--space-3);
 }
 
 .save-btn.saving {
-  opacity: 0.7;
-  cursor: not-allowed;
+  opacity: 0.8;
 }
 
-/* Toasts */
-.toast {
-  position: fixed;
-  top: var(--space-8);
-  right: var(--space-8);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-xl);
-  padding: var(--space-4) var(--space-6);
-  box-shadow: var(--shadow-xl);
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  z-index: var(--z-toast);
-  animation: slideInRight var(--transition-normal) ease;
-  backdrop-filter: blur(20px);
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .settings-content {
+    padding: var(--space-4);
+  }
+  
+  .settings-section {
+    padding: var(--space-4);
+  }
+  
+  .setting-item {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+  
+  .setting-control {
+    width: 100%;
+  }
+  
+  .footer-content {
+    flex-direction: column;
+    gap: var(--space-3);
+    align-items: stretch;
+  }
+  
+  .footer-actions {
+    justify-content: center;
+  }
 }
 
-.toast-success {
-  border-color: var(--color-success);
-  background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
-}
-
-.toast-icon {
-  font-size: var(--font-size-lg);
-}
-
-.toast-message {
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-primary);
-}
-
-@keyframes slideInRight {
+/* Animation */
+@keyframes slide-in-right {
   from {
     transform: translateX(100%);
     opacity: 0;
@@ -712,96 +807,7 @@ export default {
   }
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-  .settings-header {
-    padding: var(--space-4) var(--space-6);
-  }
-  
-  .settings-content {
-    padding: var(--space-4);
-  }
-  
-  .setting-item {
-    grid-template-columns: 1fr;
-    gap: var(--space-4);
-  }
-  
-  .setting-control {
-    min-width: auto;
-  }
-  
-  .footer-content {
-    flex-direction: column;
-    gap: var(--space-4);
-    align-items: stretch;
-  }
-  
-  .footer-actions {
-    justify-content: center;
-  }
-}
-
-@media (max-width: 480px) {
-  .header-content {
-    flex-direction: column;
-    align-items: stretch;
-    text-align: center;
-    gap: var(--space-3);
-  }
-  
-  .header-actions {
-    justify-content: center;
-  }
-  
-  .toast {
-    top: var(--space-4);
-    right: var(--space-4);
-    left: var(--space-4);
-  }
-  
-  .settings-header {
-    padding: var(--space-4);
-  }
-  
-  .settings-content {
-    padding: var(--space-4);
-  }
-  
-  .setting-item {
-    padding: var(--space-4);
-  }
-}
-
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  .settings-screen {
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-  }
-  
-  .settings-footer {
-    background: rgba(38, 38, 38, 0.8);
-  }
-  
-  .toast-success {
-    background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
-  }
-}
-
-/* Accessibility improvements */
-.back-btn:focus-visible,
-.model-select:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
-}
-
-/* Enhanced animations */
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out;
 }
 </style> 

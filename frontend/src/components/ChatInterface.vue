@@ -5,7 +5,7 @@
       <div>
         <h2 class="chat-title">{{ chatTitle }}</h2>
         <div class="chat-status">
-          <div class="status-dot" :class="{ online: isOnline }"></div>
+          <div class="status-dot" :class="{ online: isConnected }"></div>
           <span class="status-text">{{ statusText }}</span>
         </div>
       </div>
@@ -13,7 +13,7 @@
         <button 
           @click="refreshChat" 
           class="btn-secondary text-sm"
-          :disabled="isLoading"
+          :disabled="loading"
         >
           <span class="mr-2">🔄</span>
           Làm mới
@@ -21,25 +21,43 @@
       </div>
     </header>
 
+    <!-- Connection Status Banner -->
+    <div v-if="!isConnected && !checking" class="connection-banner error">
+      <span class="icon">⚠️</span>
+      <span>Không thể kết nối đến server. Đang hoạt động ở chế độ ngoại tuyến.</span>
+      <button @click="checkConnection" class="btn-link">Thử lại</button>
+    </div>
+
+    <!-- Error Banner -->
+    <div v-if="error" class="error-banner">
+      <span class="icon">❌</span>
+      <span>{{ error }}</span>
+      <button @click="clearError" class="btn-link">Đóng</button>
+    </div>
+
     <!-- Messages Area -->
     <div class="messages-area" ref="messagesContainer">
       <!-- Messages List -->
       <div class="messages-list" v-if="messages.length > 0">
         <div 
-          v-for="(message, index) in messages" 
-          :key="message.id || index"
+          v-for="message in messages" 
+          :key="message.id"
           :class="[
             'message', 
-            message.isUser ? 'user-message' : 'bot-message',
+            message.sender === 'user' ? 'user-message' : 'bot-message',
             'animate-slide-in-up'
           ]"
         >
           <div class="message-avatar">
-            <span v-if="message.isUser">👤</span>
+            <span v-if="message.sender === 'user'">👤</span>
             <span v-else>🤖</span>
           </div>
           <div class="message-content">
-            <div class="message-text" v-html="formatMessageText(message.text)"></div>
+            <div 
+              class="message-text" 
+              :class="{ 'error-message': message.type === 'error' }"
+              v-html="formatMessageText(message.content)"
+            ></div>
             <div class="message-time">
               {{ formatTime(message.timestamp) }}
             </div>
@@ -47,7 +65,7 @@
         </div>
         
         <!-- Typing Indicator -->
-        <div v-if="isTyping" class="message bot-message animate-fade-in">
+        <div v-if="loading" class="message bot-message animate-fade-in">
           <div class="message-avatar">
             <span>🤖</span>
           </div>
@@ -77,10 +95,33 @@
               :key="index"
               @click="sendExampleQuestion(question)"
               class="example-btn"
-              :disabled="isLoading"
+              :disabled="loading"
             >
               {{ question }}
             </button>
+          </div>
+
+          <!-- Repository Tools -->
+          <div class="repo-tools">
+            <h4>Phân tích Repository:</h4>
+            <div class="tool-input">
+              <input
+                v-model="repositoryUrl"
+                @keydown.enter="scanRepository"
+                placeholder="https://github.com/user/repo.git"
+                class="repo-input"
+                :disabled="loading"
+              />
+              <button 
+                @click="scanRepository"
+                :disabled="!repositoryUrl.trim() || loading"
+                class="btn-primary"
+              >
+                <span v-if="loading">⏳</span>
+                <span v-else>🔍</span>
+                Quét Repository
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -97,16 +138,16 @@
           placeholder="Nhập câu hỏi của bạn về code..."
           class="message-input"
           rows="1"
-          :disabled="isLoading"
+          :disabled="loading"
         ></textarea>
         <button 
           @click="sendMessage"
           :disabled="!canSendMessage"
           class="send-btn"
         >
-          <span v-if="isLoading" class="animate-pulse">⏳</span>
+          <span v-if="loading" class="animate-pulse">⏳</span>
           <span v-else class="icon">📤</span>
-          <span v-if="!isLoading">Gửi</span>
+          <span v-if="!loading">Gửi</span>
         </button>
       </div>
     </div>
@@ -114,6 +155,10 @@
 </template>
 
 <script>
+import { useChat, useConnectionStatus, useRepositoryScanning } from '@composables/useApi.js'
+import { config } from '@config/environment.js'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+
 export default {
   name: 'ChatInterface',
   
@@ -137,10 +182,10 @@ export default {
     exampleQuestions: {
       type: Array,
       default: () => [
+        'Định nghĩa của class User ở đâu?',
         'Phân tích kiến trúc của dự án này',
         'Tìm các vấn đề bảo mật trong code',
-        'Đề xuất cải thiện performance',
-        'Review coding standards và best practices'
+        'Đề xuất cải thiện performance'
       ]
     },
     initialMessages: {
@@ -151,156 +196,414 @@ export default {
 
   emits: [
     'send-message',
-    'refresh-chat'
+    'refresh-chat',
+    'repository-scanned',
+    'error'
   ],
 
-  data() {
-    return {
-      messages: [...this.initialMessages],
-      currentMessage: '',
-      isLoading: false,
-      isOnline: true,
-      isTyping: false
-    }
-  },
+  setup(props, { emit }) {
+    // === Reactive State ===
+    const currentMessage = ref('')
+    const repositoryUrl = ref('')
+    const repositoryContext = ref(null)
+    const messagesContainer = ref(null)
+    const messageInput = ref(null)
 
-  computed: {
-    canSendMessage() {
-      return this.currentMessage.trim() && !this.isLoading;
-    },
-    
-    statusText() {
-      if (!this.isOnline) return 'Ngoại tuyến';
-      if (this.isLoading) return 'Đang xử lý...';
-      if (this.isTyping) return 'Đang trả lời...';
-      return 'Sẵn sàng';
-    }
-  },
+    // === Composables ===
+    const { 
+      loading: chatLoading, 
+      error: chatError,
+      messages, 
+      isTyping,
+      sendMessage: sendChatMessage,
+      askQuestion,
+      clearMessages,
+      clearError: clearChatError
+    } = useChat()
 
-  methods: {
-    handleKeydown(event) {
-      if (event.key === 'Enter' && !event.shiftKey) {
-        event.preventDefault();
-        this.sendMessage();
+    const { 
+      isConnected, 
+      checking, 
+      checkConnection,
+      retryConnection
+    } = useConnectionStatus()
+
+    const {
+      loading: scanLoading,
+      error: scanError,
+      scanResult,
+      scanStatus,
+      progress,
+      scanRepository: performScan,
+      clearError: clearScanError
+    } = useRepositoryScanning()
+
+    // === Computed Properties ===
+    const loading = computed(() => chatLoading.value || scanLoading.value)
+    const error = computed(() => chatError.value || scanError.value)
+
+    const statusText = computed(() => {
+      if (checking.value) return 'Đang kiểm tra kết nối...'
+      if (!isConnected.value) return 'Ngoại tuyến'
+      if (scanStatus.value === 'scanning') return `Đang quét repository... ${progress.value}%`
+      if (loading.value) return 'Đang xử lý...'
+      return 'Trực tuyến'
+    })
+
+    const canSendMessage = computed(() => {
+      return currentMessage.value.trim() && !loading.value && isConnected.value
+    })
+
+    // === Message Handling ===
+    const handleSendMessage = async () => {
+      if (!canSendMessage.value) return
+
+      const message = currentMessage.value.trim()
+      currentMessage.value = ''
+
+      try {
+        // Emit to parent component for logging
+        emit('send-message', message)
+
+        // Determine if this is a Q&A question or regular chat
+        if (isQuestionMessage(message)) {
+          await askQuestion(message, repositoryContext.value)
+        } else {
+          await sendChatMessage(message, repositoryContext.value)
+        }
+
+        // Auto-scroll to bottom after message
+        await nextTick()
+        scrollToBottom()
+        
+      } catch (err) {
+        console.error('Error sending message:', err)
+        emit('error', err.message || 'Lỗi khi gửi tin nhắn')
       }
-    },
+    }
 
-    handleInput() {
-      // Auto-resize textarea
-      this.$nextTick(() => {
-        const textarea = this.$refs.messageInput;
-        if (textarea) {
-          textarea.style.height = 'auto';
-          textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
-        }
-      });
-    },
-
-    sendMessage() {
-      if (!this.canSendMessage) return;
-
-      const message = this.currentMessage.trim();
-      this.currentMessage = '';
+    const sendExampleQuestion = async (question) => {
+      if (loading.value) return
       
-      // Reset textarea height
-      this.$nextTick(() => {
-        const textarea = this.$refs.messageInput;
-        if (textarea) {
-          textarea.style.height = 'auto';
+      currentMessage.value = question
+      await handleSendMessage()
+    }
+
+    const isQuestionMessage = (message) => {
+      const questionPatterns = [
+        /định nghĩa|definition|define/i,
+        /ở đâu|where|location/i,
+        /class|interface|function|method/i,
+        /phân tích|analyze|analysis/i,
+        /tìm|find|search/i
+      ]
+      
+      return questionPatterns.some(pattern => pattern.test(message))
+    }
+
+    // === Repository Scanning ===
+    const scanRepository = async () => {
+      if (!repositoryUrl.value.trim() || loading.value) return
+
+      const url = repositoryUrl.value.trim()
+      
+      try {
+        clearScanError()
+        
+        const response = await performScan(url, {
+          includeAnalysis: true,
+          analyzeCode: true
+        })
+
+        if (response.success) {
+          // Update repository context for chat
+          repositoryContext.value = {
+            repository_url: url,
+            scan_id: response.scanId,
+            scan_data: response.data
+          }
+
+          // Add success message to chat
+          messages.value.push({
+            id: Date.now(),
+            content: `✅ Repository đã được quét thành công!\n\n📊 **Thống kê:**\n- Repository: ${url}\n- Scan ID: ${response.scanId}\n- Trạng thái: ${response.data?.status || 'Hoàn thành'}\n\nBạn có thể hỏi các câu hỏi về repository này.`,
+            role: 'assistant',
+            timestamp: new Date().toISOString(),
+            type: 'scan_success'
+          })
+
+          // Emit repository scanned event
+          emit('repository-scanned', {
+            url,
+            scanId: response.scanId,
+            data: response.data
+          })
+
+          // Clear repository URL after successful scan
+          repositoryUrl.value = ''
+          
+        } else {
+          // Add error message to chat
+          messages.value.push({
+            id: Date.now(),
+            content: `❌ Lỗi khi quét repository: ${response.error}`,
+            role: 'assistant',
+            timestamp: new Date().toISOString(),
+            isError: true
+          })
+          
+          emit('error', response.error)
         }
-      });
 
-      this.isLoading = true;
-      this.isTyping = true;
+        await nextTick()
+        scrollToBottom()
 
-      // Emit message to parent
-      this.$emit('send-message', message);
+      } catch (err) {
+        console.error('Repository scan error:', err)
+        emit('error', err.message || 'Lỗi khi quét repository')
+      }
+    }
 
-      // Simulate response delay
-      setTimeout(() => {
-        this.isLoading = false;
-        this.isTyping = false;
-      }, 2000);
-    },
+    // === UI Helpers ===
+    const refreshChat = async () => {
+      try {
+        clearMessages()
+        clearChatError()
+        clearScanError()
+        repositoryContext.value = null
+        repositoryUrl.value = ''
+        
+        // Check connection
+        await checkConnection()
+        
+        emit('refresh-chat')
+        
+        // Focus input after refresh
+        await nextTick()
+        messageInput.value?.focus()
+        
+      } catch (err) {
+        console.error('Error refreshing chat:', err)
+      }
+    }
 
-    sendExampleQuestion(question) {
-      this.currentMessage = question;
-      this.sendMessage();
-    },
+    const clearError = () => {
+      clearChatError()
+      clearScanError()
+    }
 
-    refreshChat() {
-      this.$emit('refresh-chat');
-    },
-
-    formatMessageText(text) {
-      // Format markdown-like syntax
+    const formatMessageText = (text) => {
+      if (!text) return ''
+      
+      // Convert markdown-like formatting to HTML
       return text
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/\*(.*?)\*/g, '<em>$1</em>')
-        .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
         .replace(/`(.*?)`/g, '<code>$1</code>')
-        .replace(/\n/g, '<br>');
-    },
-
-    formatTime(timestamp) {
-      if (!timestamp) return '';
-      
-      const now = new Date();
-      const time = new Date(timestamp);
-      const diffMs = now - time;
-      const diffMins = Math.floor(diffMs / 60000);
-      const diffHours = Math.floor(diffMs / 3600000);
-      const diffDays = Math.floor(diffMs / 86400000);
-
-      if (diffMins < 1) return 'Vừa xong';
-      if (diffMins < 60) return `${diffMins} phút trước`;
-      if (diffHours < 24) return `${diffHours} giờ trước`;
-      if (diffDays < 7) return `${diffDays} ngày trước`;
-      
-      return time.toLocaleDateString('vi-VN');
-    },
-
-    scrollToBottom() {
-      this.$nextTick(() => {
-        const container = this.$refs.messagesContainer;
-        if (container) {
-          container.scrollTop = container.scrollHeight;
-        }
-      });
+        .replace(/\n/g, '<br>')
     }
-  },
 
-  watch: {
-    messages: {
-      handler() {
-        this.scrollToBottom();
-      },
-      deep: true
-    },
-
-    initialMessages: {
-      handler(newMessages) {
-        this.messages = [...newMessages];
-      },
-      deep: true
-    }
-  },
-
-  mounted() {
-    // Focus on message input
-    this.$nextTick(() => {
-      if (this.$refs.messageInput) {
-        this.$refs.messageInput.focus();
+    const formatTime = (timestamp) => {
+      try {
+        const date = new Date(timestamp)
+        return date.toLocaleTimeString('vi-VN', {
+          hour: '2-digit',
+          minute: '2-digit'
+        })
+      } catch {
+        return ''
       }
-    });
-    
-    // Initial scroll to bottom
-    this.scrollToBottom();
+    }
+
+    const scrollToBottom = () => {
+      if (messagesContainer.value) {
+        messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+      }
+    }
+
+    // === Input Handling ===
+    const handleKeydown = (event) => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault()
+        handleSendMessage()
+      }
+    }
+
+    const handleInput = () => {
+      // Auto-resize textarea
+      const textarea = messageInput.value
+      if (textarea) {
+        textarea.style.height = 'auto'
+        textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px'
+      }
+    }
+
+    // === Lifecycle ===
+    onMounted(async () => {
+      // Initialize connection check
+      await checkConnection()
+      
+      // Load initial messages if provided
+      if (props.initialMessages.length > 0) {
+        messages.value = [...props.initialMessages]
+        await nextTick()
+        scrollToBottom()
+      }
+
+      // Focus input
+      messageInput.value?.focus()
+
+      // Set up auto-scroll for new messages
+      watch(
+        () => messages.value.length,
+        async () => {
+          await nextTick()
+          scrollToBottom()
+        }
+      )
+    })
+
+    onUnmounted(() => {
+      // Clean up any intervals or event listeners
+      clearMessages()
+    })
+
+    // === Debug Info (Development) ===
+    if (config.features.debugMode) {
+      watch([isConnected, loading, error], ([connected, isLoading, currentError]) => {
+        console.log('🔧 ChatInterface Debug:', {
+          connected,
+          loading: isLoading,
+          error: currentError,
+          messagesCount: messages.value.length,
+          repositoryContext: repositoryContext.value
+        })
+      })
+    }
+
+    return {
+      // State
+      currentMessage,
+      repositoryUrl,
+      repositoryContext,
+      messagesContainer,
+      messageInput,
+      
+      // Computed
+      loading,
+      error,
+      isConnected,
+      checking,
+      statusText,
+      canSendMessage,
+      messages,
+      isTyping,
+      scanStatus,
+      progress,
+      
+      // Methods
+      sendMessage: handleSendMessage,
+      sendExampleQuestion,
+      scanRepository,
+      refreshChat,
+      clearError,
+      checkConnection,
+      retryConnection,
+      formatMessageText,
+      formatTime,
+      handleKeydown,
+      handleInput,
+      scrollToBottom
+    }
   }
 }
 </script>
 
 <style scoped>
+/* Connection Banner */
+.connection-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: rgba(255, 165, 0, 0.1);
+  border-left: 4px solid orange;
+  color: var(--color-text-primary);
+}
+
+.connection-banner.error {
+  background: rgba(255, 0, 0, 0.1);
+  border-left-color: red;
+}
+
+/* Error Banner */
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: rgba(255, 0, 0, 0.1);
+  border-left: 4px solid red;
+  color: var(--color-text-primary);
+}
+
+/* Repository Tools */
+.repo-tools {
+  margin-top: var(--space-6);
+  padding: var(--space-4);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--border-radius-lg);
+}
+
+.tool-input {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.repo-input {
+  flex: 1;
+  padding: var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--border-radius-md);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+}
+
+.repo-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.repo-input::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+/* Error Message Styling */
+.error-message {
+  color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.1);
+  padding: var(--space-2);
+  border-radius: var(--border-radius-sm);
+  border-left: 3px solid #ff6b6b;
+}
+
+/* Button Link */
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: inherit;
+}
+
+.btn-link:hover {
+  color: var(--color-primary-hover);
+}
+
 /* Typing Indicator Animation */
 .typing-indicator {
   display: flex;
@@ -392,6 +695,14 @@ export default {
   
   .welcome-content {
     padding: var(--space-4);
+  }
+
+  .tool-input {
+    flex-direction: column;
+  }
+
+  .repo-input {
+    margin-bottom: var(--space-2);
   }
 }
 </style> 
