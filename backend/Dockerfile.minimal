@@ -1,0 +1,27 @@
+FROM python:3.11-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy minimal requirements first
+COPY requirements-minimal.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements-minimal.txt
+
+# Copy source code
+COPY . .
+
+# Create logs directory
+RUN mkdir -p logs
+
+# Set Python path
+ENV PYTHONPATH=/app/src
+
+# Default command
+CMD ["python", "repochat_cli.py", "--help"] 

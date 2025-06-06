@@ -16,9 +16,10 @@ from pydantic import BaseModel, Field
 class LLMProviderType(Enum):
     """Supported LLM provider types."""
     OPENAI = "openai"
-    ANTHROPIC = "anthropic"
-    AZURE_OPENAI = "azure_openai"
-    LOCAL = "local"
+    GOOGLE_GENAI = "google_genai"
+    OLLAMA = "ollama"
+    # ANTHROPIC = "anthropic"  # Not used - user prefers OpenAI + Google GenAI
+    # AZURE_OPENAI = "azure_openai"  # Not used - user prefers OpenAI + Google GenAI
 
 
 class LLMServiceStatus(Enum):

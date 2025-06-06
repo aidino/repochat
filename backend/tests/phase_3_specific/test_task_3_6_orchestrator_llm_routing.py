@@ -32,8 +32,9 @@ import uuid
 # LLM Service Models (copied inline)
 class LLMProviderType(Enum):
     OPENAI = "openai"
-    ANTHROPIC = "anthropic"
-    LOCAL = "local"
+    GOOGLE_GENAI = "google_genai"
+    OLLAMA = "ollama"
+    # ANTHROPIC = "anthropic"  # Not used
 
 class LLMServiceStatus(Enum):
     SUCCESS = "SUCCESS"

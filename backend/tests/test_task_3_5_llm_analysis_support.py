@@ -230,15 +230,15 @@ class TestLLMAnalysisSupportModule(unittest.TestCase):
     def test_set_default_config(self):
         """Test cập nhật default config."""
         new_config = LLMConfig(
-            provider=LLMProviderType.ANTHROPIC,
-            model="claude-3",
+            provider=LLMProviderType.GOOGLE_GENAI,
+            model="gemini-pro",
             temperature=0.7
         )
         
         self.module.set_default_config(new_config)
         
         self.assertEqual(self.module.default_llm_config, new_config)
-        self.assertEqual(self.module.default_llm_config.provider, LLMProviderType.ANTHROPIC)
+        self.assertEqual(self.module.default_llm_config.provider, LLMProviderType.GOOGLE_GENAI)
     
     def test_get_supported_analysis_types(self):
         """Test lấy danh sách analysis types được hỗ trợ."""

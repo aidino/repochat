@@ -25,9 +25,10 @@ print("🚀 Direct Task 3.5 Test - No Import Dependencies")
 class LLMProviderType(Enum):
     """Supported LLM provider types."""
     OPENAI = "openai"
-    ANTHROPIC = "anthropic"
-    AZURE_OPENAI = "azure_openai"
-    LOCAL = "local"
+    GOOGLE_GENAI = "google_genai"
+    OLLAMA = "ollama"
+    # ANTHROPIC = "anthropic"  # Not used
+    # AZURE_OPENAI = "azure_openai"  # Not used
 
 
 class LLMServiceStatus(Enum):

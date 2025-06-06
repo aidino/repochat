@@ -12,17 +12,17 @@ import uuid
 import time
 from datetime import datetime
 
-from shared.utils.logging_config import (
+from ..shared.utils.logging_config import (
     get_logger, 
     log_function_entry, 
     log_function_exit, 
     log_performance_metric
 )
-from shared.models.task_definition import TaskDefinition
-from shared.models.project_data_context import ProjectDataContext
-from teams.data_acquisition import GitOperationsModule, LanguageIdentifierModule, DataPreparationModule, PATHandlerModule
-from teams.ckg_operations import TeamCKGOperationsFacade, CKGOperationResult
-from teams.llm_services import TeamLLMServices, LLMServiceRequest, LLMServiceResponse
+from ..shared.models.task_definition import TaskDefinition
+from ..shared.models.project_data_context import ProjectDataContext
+from ..teams.data_acquisition import GitOperationsModule, LanguageIdentifierModule, DataPreparationModule, PATHandlerModule
+from ..teams.ckg_operations import TeamCKGOperationsFacade, CKGOperationResult
+from ..teams.llm_services import TeamLLMServices, LLMServiceRequest, LLMServiceResponse
 
 
 class OrchestratorAgent:

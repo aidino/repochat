@@ -286,7 +286,7 @@ class TestTask33OpenAIProvider(unittest.TestCase):
         
         # Invalid provider type
         invalid_config = LLMConfig(
-            provider=LLMProviderType.ANTHROPIC,  # Wrong provider
+            provider=LLMProviderType.GOOGLE_GENAI,  # Wrong provider for testing
             model="gpt-4o-mini"
         )
         self.assertFalse(provider.validate_config(invalid_config))
@@ -351,7 +351,7 @@ class TestTask33ProviderFactory(unittest.TestCase):
     def test_factory_create_provider_unsupported(self):
         """Test creating unsupported provider type."""
         config = LLMConfig(
-            provider=LLMProviderType.ANTHROPIC,  # Not implemented yet
+            provider=LLMProviderType.GOOGLE_GENAI,  # Not implemented yet
             model="claude-3"
         )
         

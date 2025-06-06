@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  # Neo4j Database for CKG Operations
+  neo4j:
+    image: neo4j:5.11
+    container_name: repochat-neo4j-multiagent
+    environment:
+      - NEO4J_AUTH=neo4j/password123
+      - NEO4J_PLUGINS=["apoc"]
+      - NEO4J_apoc_export_file_enabled=true
+      - NEO4J_apoc_import_file_enabled=true
+      - NEO4J_apoc_import_file_use__neo4j__config=true
+      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+      - neo4j_import:/var/lib/neo4j/import
+      - neo4j_plugins:/plugins
+    networks:
+      - repochat-network
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p password123 'RETURN 1'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Redis for Session Management
+  redis:
+    image: redis:7-alpine
+    container_name: repochat-redis-multiagent
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - repochat-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # RepoChat Backend với Multi-Agent Support
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.multiagent
+    container_name: repochat-backend-multiagent
+    environment:
+      - ENVIRONMENT=development
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=password123
+      - REDIS_URL=redis://redis:6379
+      - LOGGING_LEVEL=DEBUG
+      - MULTI_AGENT_MODE=enabled
+      - GOOGLE_ADK_ENABLED=true
+      - A2A_PROTOCOL_ENABLED=true
+      - API_GATEWAY_PORT=8000
+      - MIGRATION_MANAGER_ENABLED=true
+    ports:
+      - "8000:8000"    # Main API
+      - "8001:8001"    # API Gateway
+      - "8002:8002"    # Monitoring Dashboard
+    volumes:
+      - ./backend:/app
+      - ./logs:/app/logs
+      - ./temp:/app/temp
+    depends_on:
+      neo4j:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - repochat-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  neo4j_data:
+  neo4j_logs:
+  neo4j_import:
+  neo4j_plugins:
+  redis_data:
+
+networks:
+  repochat-network:
+    driver: bridge 

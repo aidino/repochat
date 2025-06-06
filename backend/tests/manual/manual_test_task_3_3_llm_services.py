@@ -211,7 +211,7 @@ class LLMServicesManualTester:
         # Test unsupported provider
         try:
             unsupported_config = LLMConfig(
-                provider=LLMProviderType.ANTHROPIC,  # Not implemented
+                provider=LLMProviderType.GOOGLE_GENAI,  # Not implemented yet
                 model="claude-3"
             )
             

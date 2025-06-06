@@ -1,4 +1,4 @@
-from src.shared.models import CloneResult, GitMetadata
+from shared.models.git_models import CloneResult, GitMetadata
 """
 GitOperationsModule - TEAM Data Acquisition
 

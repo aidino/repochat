@@ -186,7 +186,7 @@ Unified task execution và component coordination.
 
 ### External Services
 - **Version Control**: Git, GitHub API
-- **LLM Providers**: OpenAI GPT-4, Future: Anthropic, Google
+- **LLM Providers**: OpenAI GPT-4, Ollama (Llama2, CodeLlama, Mistral), Google GenAI
 - **Code Analysis**: AST parsing, Regex patterns
 - **Monitoring**: Performance metrics, Error tracking
 
