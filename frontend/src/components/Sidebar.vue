@@ -495,7 +495,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: var(--gemini-gradient);
+  background: var(--gradient-primary);
   color: var(--color-text-inverse);
 }
 
@@ -632,7 +632,7 @@ export default {
 }
 
 .history-item.active {
-  background: var(--gemini-gradient);
+  background: var(--gradient-primary);
   color: var(--color-text-inverse);
   border-color: transparent;
   box-shadow: var(--shadow-md);
@@ -646,7 +646,7 @@ export default {
   transform: translateY(-50%);
   width: 3px;
   height: 20px;
-  background: var(--gemini-purple);
+  background: var(--color-brown);
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
 }
 

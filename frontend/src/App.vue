@@ -367,7 +367,7 @@ export default {
   flex: 1;
   overflow-y: auto;
   padding: var(--space-4);
-  background: var(--gemini-gradient-light);
+  background: var(--gradient-secondary);
 }
 
 .messages-list {
@@ -422,7 +422,7 @@ export default {
 }
 
 .user-message .message-text {
-  background: var(--gemini-gradient);
+  background: var(--gradient-primary);
   color: var(--color-text-inverse);
   border: none;
 }
@@ -494,7 +494,7 @@ export default {
 }
 
 .example-btn:hover {
-  background: var(--gemini-gradient);
+  background: var(--gradient-primary);
   color: var(--color-text-inverse);
   transform: translateY(-1px);
   box-shadow: var(--shadow-md);
@@ -532,7 +532,7 @@ export default {
 
 .message-input:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
+  box-shadow: 0 0 0 3px rgba(182, 176, 159, 0.2);
 }
 
 .send-btn {

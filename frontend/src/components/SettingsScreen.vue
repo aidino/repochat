@@ -398,7 +398,7 @@ export default {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--gemini-gradient-light);
+  background: var(--gradient-secondary);
   font-family: var(--font-family-primary);
   color: var(--color-text-primary);
   overflow: hidden;
@@ -406,7 +406,7 @@ export default {
 
 /* Header */
 .settings-header {
-  background: var(--gemini-gradient);
+  background: var(--gradient-primary);
   color: var(--color-text-inverse);
   padding: var(--space-6) var(--space-8);
   flex-shrink: 0;
@@ -574,7 +574,7 @@ export default {
   color: var(--color-text-primary);
   transition: all var(--transition-fast);
   appearance: none;
-  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%234285f4' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23B6B09F' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
   background-position: right var(--space-4) center;
   background-repeat: no-repeat;
   background-size: 1.5em 1.5em;
@@ -586,7 +586,7 @@ export default {
 .model-select:focus {
   outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
+  box-shadow: 0 0 0 3px rgba(182, 176, 159, 0.2);
 }
 
 .model-select:hover {
