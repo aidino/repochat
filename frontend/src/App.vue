@@ -2,627 +2,533 @@
   <div class="app-container">
     <!-- Settings Screen -->
     <SettingsScreen 
-      v-if="showSettings"
-      @go-back="closeSettings"
-      @settings-saved="onSettingsSaved"
+      v-if="currentView === 'settings'"
+      @go-back="goBackFromSettings"
+      @settings-saved="handleSettingsSaved"
     />
 
-    <!-- Main App Layout (when not showing settings) -->
+    <!-- Main App Layout -->
     <template v-else>
-      <!-- Sidebar Component -->
-      <Sidebar 
-        :currentChatId="currentChatId"
-        :isLoading="isLoading"
-        @new-chat="startNewChat"
+      <!-- Modern Sidebar -->
+      <ModernSidebar
+        :show-on-mobile="sidebarVisible"
+        :current-chat-id="currentChatId"
+        :user-name="userSettings.name"
+        @new-chat="handleNewChat"
+        @select-chat="handleSelectChat"
+        @delete-chat="handleDeleteChat"
+        @rename-chat="handleRenameChat"
+        @export-chat="handleExportChat"
+        @duplicate-chat="handleDuplicateChat"
         @open-settings="openSettings"
-        @select-chat="selectChat"
-        @delete-chat="deleteChat"
-        @rename-chat="renameChat"
-        @duplicate-chat="duplicateChat"
-        @export-chat="exportChat"
+        @close-sidebar="closeSidebar"
+        @toggle-favorite="handleToggleFavorite"
+        @clear-all-chats="handleClearAllChats"
       />
 
-      <!-- Main Chat Area -->
-      <main class="chat-container">
-      <!-- Chat Header -->
-      <header class="chat-header">
-        <h2 class="chat-title">{{ currentChatTitle }}</h2>
-        <div class="chat-status">
-          <span class="status-dot" :class="{ online: isOnline }"></span>
-          <span class="status-text">{{ isOnline ? 'Trực tuyến' : 'Ngoại tuyến' }}</span>
-        </div>
-      </header>
-
-      <!-- Messages Area -->
-      <div class="messages-area" ref="messagesContainer">
-        <div class="messages-list">
-          <div 
-            v-for="message in messages" 
-            :key="message.id"
-            class="message"
-            :class="{ 'user-message': message.isUser, 'bot-message': !message.isUser }"
-          >
-            <div class="message-avatar">
-              <span v-if="message.isUser">👤</span>
-              <span v-else>🤖</span>
-            </div>
-            <div class="message-content">
-              <div class="message-text">{{ message.text }}</div>
-              <div class="message-time">{{ formatTime(message.timestamp) }}</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Welcome Message when no messages -->
-        <div v-if="messages.length === 0" class="welcome-message">
-          <div class="welcome-content">
-            <h2>👋 Chào mừng đến với RepoChat!</h2>
-            <p>Tôi là trợ lý AI phân tích repository thông minh.</p>
-            <p>Hãy bắt đầu bằng cách nhập câu hỏi hoặc yêu cầu phân tích repository.</p>
-            
-            <div class="example-questions">
-              <h4>Ví dụ về câu hỏi:</h4>
-              <button 
-                v-for="example in exampleQuestions" 
-                :key="example"
-                class="example-btn"
-                @click="sendExampleQuestion(example)"
-              >
-                {{ example }}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Input Area -->
-      <div class="input-area">
-        <div class="input-container">
-          <input
-            v-model="inputMessage"
-            @keyup.enter="sendMessage"
-            class="input message-input"
-            placeholder="Nhập tin nhắn của bạn..."
-            :disabled="isLoading"
-          />
-          <button 
-            @click="sendMessage"
-            class="btn btn-primary send-btn"
-            :disabled="!inputMessage.trim() || isLoading"
-          >
-                      <span v-if="isLoading" class="icon">⏳</span>
-          <span v-else class="icon">↗</span>
-            {{ isLoading ? 'Đang xử lý...' : 'Gửi' }}
-          </button>
-        </div>
-      </div>
-    </main>
+      <!-- Chat Interface -->
+      <ChatInterface
+        :chat-title="currentChatTitle"
+        :welcome-title="welcomeSettings.title"
+        :welcome-subtitle="welcomeSettings.subtitle"
+        :welcome-description="welcomeSettings.description"
+        :example-questions="exampleQuestions"
+        :initial-messages="currentChatMessages"
+        @send-message="handleSendMessage"
+        @refresh-chat="handleRefreshChat"
+        @toggle-sidebar="toggleSidebar"
+        ref="chatInterface"
+      />
     </template>
   </div>
 </template>
 
 <script>
-import Sidebar from './components/Sidebar.vue'
+import ChatInterface from './components/ChatInterface.vue'
+import ModernSidebar from './components/ModernSidebar.vue'
 import SettingsScreen from './components/SettingsScreen.vue'
 
 export default {
   name: 'App',
+  
   components: {
-    Sidebar,
+    ChatInterface,
+    ModernSidebar,
     SettingsScreen
   },
+
   data() {
     return {
-      // App state
-      showSettings: false,
+      // App State
+      currentView: 'chat', // 'chat' | 'settings'
+      sidebarVisible: window.innerWidth >= 1024, // Show on desktop, hide on mobile by default
       
-      // Chat state
-      currentChatId: 1,
-      inputMessage: '',
-      isLoading: false,
-      isOnline: true,
+      // Chat State
+      currentChatId: null,
+      chats: new Map(), // Store chat data by ID
       
-      // Messages
-      messages: [],
-      
-      // Example questions
+      // User Settings
+      userSettings: {
+        name: 'Developer',
+        theme: 'dark',
+        language: 'vi'
+      },
+
+      // Welcome Screen Settings
+      welcomeSettings: {
+        title: 'Chào mừng đến với RepoChat!',
+        subtitle: 'Trợ lý AI thông minh cho việc phân tích và review code',
+        description: 'Hãy bắt đầu bằng cách hỏi một câu hỏi hoặc thử một trong những ví dụ dưới đây:'
+      },
+
+      // Example Questions
       exampleQuestions: [
-        'Phân tích repository https://github.com/spring-projects/spring-petclinic.git',
-        'Review PR #123 của repository này',
-        'Định nghĩa của class User ở đâu?',
-        'Tìm các circular dependencies trong code'
-      ]
+        'Phân tích kiến trúc của dự án này',
+        'Tìm các vấn đề bảo mật trong code',
+        'Đề xuất cải thiện performance',
+        'Review coding standards và best practices',
+        'Giải thích luồng xử lý chính của ứng dụng',
+        'Tìm các anti-patterns trong codebase'
+      ],
+
+      // API Configuration
+      apiConfig: {
+        baseUrl: 'http://localhost:8000',
+        timeout: 30000,
+        maxRetries: 3
+      }
     }
   },
-  
+
   computed: {
     currentChatTitle() {
-      // For now, use simple title logic. In real app, this would come from chat data
-      return this.currentChatId === 1 ? 'Phân tích Spring Pet Clinic' : 'Chat Mới'
+      if (!this.currentChatId) return 'Trợ lý AI Code Review';
+      
+      const chat = this.chats.get(this.currentChatId);
+      return chat?.title || 'Cuộc trò chuyện mới';
+    },
+
+    currentChatMessages() {
+      if (!this.currentChatId) return [];
+      
+      const chat = this.chats.get(this.currentChatId);
+      return chat?.messages || [];
     }
   },
-  
+
   methods: {
-    startNewChat() {
-      this.currentChatId = Date.now()
-      this.messages = []
-      console.log('Started new chat with ID:', this.currentChatId)
-    },
+    // === Navigation Methods ===
     
     openSettings() {
-      console.log('Opening settings screen...')
-      this.showSettings = true
+      console.log('Opening settings...');
+      this.currentView = 'settings';
+      this.sidebarVisible = false;
     },
-    
-    selectChat(chatId) {
-      this.currentChatId = chatId
-      // In a real app, load messages for this chat from API
-      this.messages = []
-      console.log('Selected chat:', chatId)
+
+    goBackFromSettings() {
+      console.log('Returning from settings...');
+      this.currentView = 'chat';
     },
+
+    handleSettingsSaved(settingsData) {
+      console.log('Settings saved:', settingsData);
+      // TODO: Apply settings to app state
+      
+      // Auto-close settings after a delay
+      setTimeout(() => {
+        this.goBackFromSettings();
+      }, 2000);
+    },
+
+    // === Sidebar Methods ===
     
-    // === New Sidebar Event Handlers ===
-    deleteChat(chatId) {
-      console.log('Delete chat requested:', chatId)
-      // If deleting current chat, switch to new chat
-      if (chatId === this.currentChatId) {
-        this.startNewChat()
+    toggleSidebar() {
+      // Only toggle on mobile/tablet
+      if (window.innerWidth < 1024) {
+        this.sidebarVisible = !this.sidebarVisible;
       }
     },
-    
-    renameChat(data) {
-      console.log('Rename chat requested:', data)
-      // In real app, update chat title in backend
+
+    closeSidebar() {
+      // Only close on mobile/tablet
+      if (window.innerWidth < 1024) {
+        this.sidebarVisible = false;
+      }
     },
+
+    // === Chat Management Methods ===
     
-    duplicateChat(chat) {
-      console.log('Duplicate chat requested:', chat)
-      // In real app, create new chat based on existing one
-      this.currentChatId = chat.id
-      this.messages = []
+    handleNewChat(chatData = null) {
+      const newChatId = Date.now();
+      const newChat = {
+        id: newChatId,
+        title: chatData?.title || 'Cuộc trò chuyện mới',
+        messages: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        isFavorite: false,
+        messageCount: 0
+      };
+
+      this.chats.set(newChatId, newChat);
+      this.currentChatId = newChatId;
+      this.sidebarVisible = false;
+
+      console.log('Created new chat:', newChat);
     },
-    
-    exportChat(chat) {
-      console.log('Export chat requested:', chat)
-      // In real app, export chat data
-    },
-    
-    // === Settings Management ===
-    closeSettings() {
-      console.log('Closing settings screen...')
-      this.showSettings = false
-    },
-    
-    onSettingsSaved(settingsData) {
-      console.log('Settings saved in parent app:', settingsData)
-      // Optional: show notification or handle settings update
-      // For now, just close settings automatically after save
-      setTimeout(() => {
-        this.closeSettings()
-      }, 2000)
-    },
-    
-    sendMessage() {
-      if (!this.inputMessage.trim() || this.isLoading) return
+
+    handleSelectChat(chat) {
+      this.currentChatId = chat.id;
+      this.sidebarVisible = false;
       
-      // Add user message
-      const userMessage = {
-        id: Date.now(),
-        text: this.inputMessage,
-        isUser: true,
-        timestamp: new Date()
+      console.log('Selected chat:', chat.id, chat.title);
+    },
+
+    handleDeleteChat(chat) {
+      this.chats.delete(chat.id);
+      
+      // If deleted chat was current, switch to new chat
+      if (this.currentChatId === chat.id) {
+        this.handleNewChat();
       }
       
-      this.messages.push(userMessage)
+      console.log('Deleted chat:', chat.id);
+    },
+
+    handleRenameChat(data) {
+      const chat = this.chats.get(data.id);
+      if (chat) {
+        chat.title = data.title;
+        chat.updatedAt = new Date();
+      }
       
-      // Store input for processing
-      const messageText = this.inputMessage
-      this.inputMessage = ''
-      this.isLoading = true
+      console.log('Renamed chat:', data);
+    },
+
+    handleExportChat(chat) {
+      const chatData = this.chats.get(chat.id);
+      if (chatData) {
+        const exportData = {
+          ...chatData,
+          exportedAt: new Date().toISOString()
+        };
+        
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+          type: 'application/json'
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `repochat-${chat.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
       
-      // Simulate bot response
-      setTimeout(() => {
-        const botMessage = {
-          id: Date.now() + 1,
-          text: this.generateBotResponse(messageText),
-          isUser: false,
-          timestamp: new Date()
+      console.log('Exported chat:', chat.id);
+    },
+
+    handleDuplicateChat(chat) {
+      const originalChat = this.chats.get(chat.id);
+      if (originalChat) {
+        const duplicatedChat = {
+          ...originalChat,
+          id: Date.now(),
+          title: originalChat.title + ' (Bản sao)',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+        
+        this.chats.set(duplicatedChat.id, duplicatedChat);
+        this.currentChatId = duplicatedChat.id;
+      }
+      
+      console.log('Duplicated chat:', chat.id);
+    },
+
+    handleToggleFavorite(chat) {
+      const chatData = this.chats.get(chat.id);
+      if (chatData) {
+        chatData.isFavorite = chat.isFavorite;
+        chatData.updatedAt = new Date();
+      }
+      
+      console.log('Toggled favorite for chat:', chat.id, chat.isFavorite);
+    },
+
+    handleClearAllChats() {
+      this.chats.clear();
+      this.handleNewChat();
+      
+      console.log('Cleared all chats');
+    },
+
+    handleRefreshChat() {
+      // Clear current chat messages
+      if (this.currentChatId) {
+        const chat = this.chats.get(this.currentChatId);
+        if (chat) {
+          chat.messages = [];
+          chat.messageCount = 0;
+          chat.updatedAt = new Date();
         }
-        
-        this.messages.push(botMessage)
-        this.isLoading = false
-        
-        // Auto-scroll to bottom
-        this.$nextTick(() => {
-          this.scrollToBottom()
-        })
-      }, 1500)
+      }
       
-      // Auto-scroll to bottom for user message
-      this.$nextTick(() => {
-        this.scrollToBottom()
-      })
+      console.log('Refreshed chat:', this.currentChatId);
     },
+
+    // === Message Handling ===
     
-    sendExampleQuestion(question) {
-      this.inputMessage = question
-      this.sendMessage()
-    },
-    
-    generateBotResponse(userMessage) {
-      // Mock bot responses based on message content
-      const message = userMessage.toLowerCase()
+    async handleSendMessage(data) {
+      console.log('Sending message:', data.message);
       
-      if (message.includes('repository') || message.includes('repo')) {
-        return '🔍 Tôi hiểu bạn muốn phân tích repository. Hiện tại đây là giao diện demo. Trong phiên bản production, tôi sẽ kết nối với backend để thực hiện phân tích repository thực sự bằng CLI commands.'
-      } else if (message.includes('pr') || message.includes('pull request')) {
-        return '📝 Chức năng review Pull Request đang được phát triển. Tôi sẽ có thể phân tích các thay đổi code, tác động đến hệ thống và đưa ra các gợi ý cải thiện.'
-      } else if (message.includes('class') || message.includes('định nghĩa')) {
-        return '🎯 Tôi có thể giúp bạn tìm định nghĩa class trong codebase. Ví dụ: "Class User được định nghĩa tại: src/models/user.py:15"'
-      } else if (message.includes('circular') || message.includes('dependency')) {
-        return '🔄 Tôi có thể phát hiện circular dependencies trong code và đưa ra các giải pháp để fix chúng.'
-      } else {
-        return `✨ Cảm ơn bạn đã gửi: "${userMessage}". Đây là giao diện chat cơ bản cho RepoChat v1.0. Tôi hiểu được tin nhắn và sẽ phản hồi thông minh hơn khi được tích hợp với backend!`
+      if (!this.currentChatId) {
+        this.handleNewChat();
+      }
+
+      const chat = this.chats.get(this.currentChatId);
+      if (!chat) return;
+
+      // Update chat metadata
+      chat.messageCount = (chat.messageCount || 0) + 1;
+      chat.updatedAt = new Date();
+      
+      // Generate appropriate title for new chats
+      if (chat.title === 'Cuộc trò chuyện mới' && data.message.length > 0) {
+        chat.title = this.generateChatTitle(data.message);
+      }
+
+      try {
+        // TODO: Replace with actual API call
+        const response = await this.mockApiCall(data.message);
+        
+        // Handle successful response
+        data.onResponse(response);
+        
+        // Update chat with bot response
+        chat.messageCount += 1;
+        chat.updatedAt = new Date();
+        
+      } catch (error) {
+        console.error('Error sending message:', error);
+        data.onError(error);
       }
     },
+
+    // === Mock API Call (Replace with real backend integration) ===
     
-    scrollToBottom() {
-      const container = this.$refs.messagesContainer
-      if (container) {
-        container.scrollTop = container.scrollHeight
+    async mockApiCall(message) {
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Mock intelligent responses
+      const responses = {
+        'phân tích': `🔍 **Phân tích dự án hoàn tất**
+
+Tôi đã phân tích dự án của bạn và phát hiện:
+
+**✅ Điểm mạnh:**
+- Cấu trúc thư mục rõ ràng và có tổ chức
+- Component architecture tốt với separation of concerns
+- Modern CSS với CSS variables và utility classes
+
+**⚠️ Cần cải thiện:**
+- Thiếu unit tests cho một số components quan trọng
+- Component state management có thể tối ưu hơn
+- Accessibility features cần được bổ sung thêm
+
+**🚀 Đề xuất:**
+1. Implement Vue Testing Library cho unit tests
+2. Consider Pinia cho centralized state management
+3. Add ARIA labels và keyboard navigation support`,
+
+        'bảo mật': `🔒 **Security Audit Report**
+
+Sau khi scan codebase, tôi tìm thấy các vấn đề bảo mật:
+
+**🔴 Critical:**
+- API endpoints thiếu input validation
+- Chưa implement CSRF protection
+- Missing rate limiting cho API calls
+
+**🟡 Medium:**
+- XSS prevention cần được strengthen
+- JWT tokens không có proper expiration handling
+- File upload validation chưa đầy đủ
+
+**🔧 Khuyến nghị:**
+1. Implement \`express-validator\` cho API validation
+2. Add \`csurf\` middleware cho CSRF protection  
+3. Use \`express-rate-limit\` cho API rate limiting
+4. Sanitize user inputs với \`DOMPurify\``,
+
+        'performance': `⚡ **Performance Analysis**
+
+Dựa trên phân tích, đây là các tối ưu được đề xuất:
+
+**📦 Bundle Optimization:**
+- Hiện tại bundle size: ~2.3MB
+- Có thể giảm xuống ~800KB với các tối ưu sau:
+
+**🎯 Immediate Actions:**
+1. **Code Splitting**: Implement dynamic imports cho routes
+   \`\`\`javascript
+   const Settings = () => import('./views/Settings.vue')
+   \`\`\`
+
+2. **Tree Shaking**: Remove unused CSS và JS code
+3. **Image Optimization**: Convert to WebP format (30-50% size reduction)
+4. **Lazy Loading**: Components và images off-screen
+
+**📊 Expected Results:**
+- Load time: 2.1s → 0.8s  
+- Bundle size: 2.3MB → 800KB
+- Core Web Vitals: All green scores`,
+
+        'standards': `📋 **Code Standards Review**
+
+**✅ Following Best Practices:**
+- Consistent naming conventions (camelCase, PascalCase)
+- Proper component structure với single responsibility
+- ESLint rules được tuân thủ tốt
+- Git commit messages theo conventional format
+
+**⚠️ Areas for Improvement:**
+
+**TypeScript Integration:**
+\`\`\`typescript
+// Current: Plain JavaScript
+export default {
+  name: 'Component'
+}
+
+// Recommended: TypeScript
+export default defineComponent({
+  name: 'Component'
+}) as DefineComponent
+\`\`\`
+
+**Documentation:**
+- JSDoc comments cho functions
+- Component props documentation
+- API endpoint documentation
+
+**Testing Coverage:**
+- Current: ~45% coverage
+- Target: 80%+ coverage
+- Missing: Edge cases và error scenarios`
+      };
+
+      // Find matching response based on keywords
+      for (const [keyword, response] of Object.entries(responses)) {
+        if (message.toLowerCase().includes(keyword)) {
+          return response;
+        }
+      }
+
+      // Default intelligent response
+      return `Tôi đã nhận được câu hỏi: "${message}"
+
+Để có thể trả lời chính xác và hữu ích hơn, bạn có thể cung cấp thêm thông tin về:
+
+🔹 **Ngôn ngữ/Framework**: JavaScript, Python, Vue.js, React, etc.
+🔹 **Loại phân tích**: Security audit, performance review, code quality
+🔹 **Scope**: Specific files, components, hoặc toàn bộ project
+🔹 **Repository URL**: Để tôi có thể clone và phân tích chi tiết
+
+**Ví dụ câu hỏi tốt:**
+- "Phân tích security cho Vue.js project tại https://github.com/user/repo"
+- "Review performance của React components trong folder /src/components"
+- "Tìm code smells trong Python backend API"
+
+Hãy thử lại với thông tin cụ thể hơn! 🚀`;
+    },
+
+    // === Helper Methods ===
+    
+    generateChatTitle(message) {
+      // Generate meaningful chat title from first message
+      const cleanMessage = message.trim().toLowerCase();
+      
+      if (cleanMessage.includes('phân tích')) return 'Phân tích dự án';
+      if (cleanMessage.includes('bảo mật') || cleanMessage.includes('security')) return 'Security audit';
+      if (cleanMessage.includes('performance')) return 'Performance review';
+      if (cleanMessage.includes('review') || cleanMessage.includes('code')) return 'Code review';
+      if (cleanMessage.includes('bug') || cleanMessage.includes('lỗi')) return 'Bug investigation';
+      
+      // Fallback: use first few words
+      const words = message.split(' ').slice(0, 4).join(' ');
+      return words.length > 30 ? words.substring(0, 30) + '...' : words;
+    },
+
+    // === Lifecycle Methods ===
+    
+    loadUserSettings() {
+      // Load user settings from localStorage
+      const saved = localStorage.getItem('repochat-settings');
+      if (saved) {
+        try {
+          const settings = JSON.parse(saved);
+          this.userSettings = { ...this.userSettings, ...settings };
+        } catch (error) {
+          console.warn('Failed to load user settings:', error);
+        }
       }
     },
-    
-    formatDate(date) {
-      return new Intl.DateTimeFormat('vi-VN', {
-        month: 'short',
-        day: 'numeric'
-      }).format(date)
-    },
-    
-    formatTime(date) {
-      return new Intl.DateTimeFormat('vi-VN', {
-        hour: '2-digit',
-        minute: '2-digit'
-      }).format(date)
+
+    saveUserSettings() {
+      // Save user settings to localStorage
+      localStorage.setItem('repochat-settings', JSON.stringify(this.userSettings));
     }
   },
-  
+
   mounted() {
-    // Simulate online status
+    // Load user settings
+    this.loadUserSettings();
+    
+    // Create initial chat
+    this.handleNewChat();
+    
+    // Handle window resize for responsive sidebar
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        this.sidebarVisible = true; // Always show on desktop
+      } else {
+        this.sidebarVisible = false; // Hide on mobile by default
+      }
+    };
+    
+    window.addEventListener('resize', handleResize);
+    
+    // Store resize handler for cleanup
+    this.resizeHandler = handleResize;
+    
+    // Check online status periodically
     setInterval(() => {
-      this.isOnline = navigator.onLine
-    }, 5000)
+      // This could be used to check backend connectivity
+    }, 30000);
+
+    console.log('RepoChat App initialized with modern theme');
+    },
+
+  beforeUnmount() {
+    // Cleanup event listeners
+    if (this.resizeHandler) {
+      window.removeEventListener('resize', this.resizeHandler);
+    }
+    // Save user settings before leaving
+    this.saveUserSettings();
   }
 }
 </script>
 
-<style scoped>
-/* Import Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap');
+<style>
+/* Global styles are already in main.css */
+/* App-specific styles can be added here if needed */
 
-.app-container {
-  display: flex;
-  width: 100vw;
-  height: 100vh;
-  font-family: var(--font-family-primary);
-  background: var(--color-background);
-  color: var(--color-text-primary);
-}
-
-
-
-/* Chat Container */
-.chat-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  background: var(--color-background);
-}
-
-.chat-header {
-  padding: var(--space-4) var(--space-6);
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border-subtle);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  box-shadow: var(--shadow-sm);
-  backdrop-filter: blur(10px);
-}
-
-.chat-title {
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
-  letter-spacing: -0.025em;
-}
-
-.chat-status {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.status-dot {
-  width: var(--space-2);
-  height: var(--space-2);
-  border-radius: var(--radius-full);
-  background: var(--color-text-tertiary);
-  animation: pulse 2s infinite;
-}
-
-.status-dot.online {
-  background: var(--color-success);
-}
-
-.status-text {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  font-weight: var(--font-weight-medium);
-}
-
-/* Messages Area */
-.messages-area {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--space-4);
-  background: var(--gradient-secondary);
-}
-
-.messages-list {
-  max-width: 800px;
-  margin: 0 auto;
-}
-
-.message {
-  display: flex;
-  gap: var(--space-3);
-  margin-bottom: var(--space-4);
-  animation: slideIn var(--transition-normal) ease;
-}
-
-.message.user-message {
-  flex-direction: row-reverse;
-}
-
-.message-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-full);
-  background: var(--color-surface);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--font-size-lg);
-  box-shadow: var(--shadow-md);
-  flex-shrink: 0;
-  border: 2px solid var(--color-border-subtle);
-}
-
-.message-content {
-  max-width: 70%;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.user-message .message-content {
-  align-items: flex-end;
-}
-
-.message-text {
-  background: var(--color-surface);
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-sm);
-  line-height: var(--line-height-relaxed);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--color-border-subtle);
-}
-
-.user-message .message-text {
-  background: var(--gradient-primary);
-  color: var(--color-text-inverse);
-  border: none;
-}
-
-.message-time {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
-  padding: 0 var(--space-2);
-  font-weight: var(--font-weight-medium);
-}
-
-/* Welcome Message */
-.welcome-message {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-  text-align: center;
-}
-
-.welcome-content {
-  max-width: 500px;
-  padding: var(--space-8);
-  background: var(--color-surface);
-  border-radius: var(--radius-2xl);
-  box-shadow: var(--shadow-lg);
-  backdrop-filter: blur(20px);
-  border: 1px solid var(--color-border-subtle);
-}
-
-.welcome-content h2 {
-  font-size: var(--font-size-2xl);
-  margin-bottom: var(--space-4);
-  color: var(--color-text-primary);
-  font-weight: var(--font-weight-bold);
-  letter-spacing: -0.025em;
-}
-
-.welcome-content p {
-  color: var(--color-text-secondary);
-  margin-bottom: var(--space-3);
-  line-height: var(--line-height-relaxed);
-}
-
-.example-questions {
-  margin-top: var(--space-8);
-}
-
-.example-questions h4 {
-  margin-bottom: var(--space-4);
-  color: var(--color-text-primary);
-  font-weight: var(--font-weight-semibold);
-}
-
-.example-btn {
-  display: block;
-  width: 100%;
-  margin-bottom: var(--space-2);
-  padding: var(--space-3);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  color: #ffffff;
-  text-align: left;
-  font-family: var(--font-family-primary);
-  font-weight: var(--font-weight-medium);
-}
-
-.example-btn:hover {
-  background: var(--color-surface);
-  color: #ffffff;
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
-  border-color: var(--color-border-strong);
-}
-
-/* Input Area */
-.input-area {
-  padding: var(--space-4) var(--space-6);
-  background: #2c3e50;
-  border-top: 1px solid var(--color-border-subtle);
-  backdrop-filter: blur(20px);
-  box-shadow: var(--shadow-lg);
-}
-
-.input-container {
-  max-width: 800px;
-  margin: 0 auto;
-  display: flex;
-  gap: var(--space-3);
-  align-items: flex-end;
-}
-
-.message-input {
-  flex: 1;
-  min-height: 50px;
-  resize: none;
-  border-radius: var(--radius-xl);
-  border: 2px solid var(--color-border);
-  padding: var(--space-4) var(--space-5);
-  font-family: var(--font-family-primary);
-  font-size: var(--font-size-base);
-  transition: all var(--transition-fast);
-}
-
-.message-input:focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(182, 176, 159, 0.2);
-}
-
-.send-btn {
-  min-width: 100px;
-  height: 50px;
-  border-radius: var(--radius-xl);
-}
-
-.send-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.icon {
-  font-size: var(--font-size-base);
-}
-
-/* Animations */
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-}
-
-/* Responsive Design */
+/* Ensure proper mobile behavior */
 @media (max-width: 768px) {
-  .message-content {
-    max-width: 85%;
-  }
-  
-  .input-container {
-    padding: 0 var(--space-2);
-  }
-  
-  .chat-header {
-    padding: var(--space-3) var(--space-4);
-  }
-  
-  .messages-area {
-    padding: var(--space-3);
-  }
-  
-  .input-area {
-    padding: var(--space-3) var(--space-4);
-  }
-}
-
-@media (max-width: 480px) {
-  .welcome-content {
-    padding: var(--space-6);
-    margin: var(--space-4);
-  }
-  
-  .send-btn {
-    min-width: 80px;
-  }
-  
-  .message-avatar {
-    width: 32px;
-    height: 32px;
-    font-size: var(--font-size-base);
-  }
-}
-
-/* Accessibility improvements */
-.message-input:focus-visible,
-.example-btn:focus-visible,
-.send-btn:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
-}
-
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  .input-area {
-    background: rgba(38, 38, 38, 0.8);
+  .app-container {
+    overflow: hidden;
   }
 }
 </style> 
