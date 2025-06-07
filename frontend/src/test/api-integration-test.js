@@ -255,7 +255,7 @@ class APIIntegrationTester {
   async testSettingsManagement() {
     try {
       // Test get settings
-      const getResponse = await apiService.getSettings()
+      const getResponse = await apiService.getSettings('user123')
       
       if (typeof getResponse !== 'object') {
         throw new Error('Get settings should return object')
@@ -269,7 +269,7 @@ class APIIntegrationTester {
         }
       }
       
-      const updateResponse = await apiService.updateSettings(testSettings)
+      const updateResponse = await apiService.updateSettings(testSettings, 'user123')
       
       if (typeof updateResponse !== 'object') {
         throw new Error('Update settings should return object')

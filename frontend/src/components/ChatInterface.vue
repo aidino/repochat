@@ -64,14 +64,29 @@
           </div>
         </div>
         
-        <!-- Typing Indicator -->
-        <div v-if="loading" class="message bot-message animate-fade-in">
+        <!-- Enhanced Typing Indicator with Streaming Status -->
+        <div v-if="loading || isStreaming" class="message bot-message animate-fade-in">
           <div class="message-avatar">
             <span>🤖</span>
           </div>
           <div class="message-content">
             <div class="message-text">
-              <div class="typing-indicator">
+              <!-- Streaming Status Display -->
+              <div v-if="isStreaming && currentStatus" class="streaming-status">
+                <div class="status-header">
+                  <span class="status-text">{{ currentStatus }}</span>
+                  <span class="status-progress">{{ statusProgress }}%</span>
+                </div>
+                <div class="progress-bar">
+                  <div 
+                    class="progress-fill" 
+                    :style="{ width: statusProgress + '%' }"
+                  ></div>
+                </div>
+              </div>
+              
+              <!-- Default Typing Indicator -->
+              <div v-else class="typing-indicator">
                 <span></span>
                 <span></span>
                 <span></span>
@@ -216,9 +231,15 @@ export default {
       messages, 
       isTyping,
       sendMessage: sendChatMessage,
+      sendMessageStream,
       askQuestion,
+      askQuestionStream,
       clearMessages,
-      clearError: clearChatError
+      clearError: clearChatError,
+      // Streaming states
+      currentStatus,
+      statusProgress,
+      isStreaming
     } = useChat()
 
     const { 
@@ -239,19 +260,20 @@ export default {
     } = useRepositoryScanning()
 
     // === Computed Properties ===
-    const loading = computed(() => chatLoading.value || scanLoading.value)
+    const loading = computed(() => chatLoading.value || scanLoading.value || isStreaming.value)
     const error = computed(() => chatError.value || scanError.value)
 
     const statusText = computed(() => {
       if (checking.value) return 'Đang kiểm tra kết nối...'
       if (!isConnected.value) return 'Ngoại tuyến'
+      if (isStreaming.value && currentStatus.value) return currentStatus.value
       if (scanStatus.value === 'scanning') return `Đang quét repository... ${progress.value}%`
       if (loading.value) return 'Đang xử lý...'
       return 'Trực tuyến'
     })
 
     const canSendMessage = computed(() => {
-      return currentMessage.value.trim() && !loading.value && isConnected.value
+      return currentMessage.value.trim() && !loading.value && isConnected.value && !isStreaming.value
     })
 
     // === Message Handling ===
@@ -259,17 +281,26 @@ export default {
       if (!canSendMessage.value) return
 
       const message = currentMessage.value.trim()
+      
+      // Clear input immediately when user clicks send
       currentMessage.value = ''
+
+      // Reset textarea height and focus back to input
+      await nextTick()
+      resetTextareaHeight()
+      if (messageInput.value) {
+        messageInput.value.focus()
+      }
 
       try {
         // Emit to parent component for logging
         emit('send-message', message)
 
-        // Determine if this is a Q&A question or regular chat
+        // Use streaming for better UX - determine if this is a Q&A question or regular chat
         if (isQuestionMessage(message)) {
-          await askQuestion(message, repositoryContext.value)
+          await askQuestionStream(message, repositoryContext.value)
         } else {
-          await sendChatMessage(message, repositoryContext.value)
+          await sendMessageStream(message, repositoryContext.value)
         }
 
         // Auto-scroll to bottom after message
@@ -278,6 +309,10 @@ export default {
         
       } catch (err) {
         console.error('Error sending message:', err)
+        
+        // If there's an error, put the message back in the input
+        currentMessage.value = message
+        
         emit('error', err.message || 'Lỗi khi gửi tin nhắn')
       }
     }
@@ -285,7 +320,10 @@ export default {
     const sendExampleQuestion = async (question) => {
       if (loading.value) return
       
+      // Set the question as current message
       currentMessage.value = question
+      
+      // Send the message (handleSendMessage will clear the input)
       await handleSendMessage()
     }
 
@@ -438,6 +476,15 @@ export default {
       }
     }
 
+    // Helper function to reset textarea height
+    const resetTextareaHeight = () => {
+      const textarea = messageInput.value
+      if (textarea) {
+        textarea.style.height = 'auto'
+        textarea.style.height = '44px' // Reset to default height
+      }
+    }
+
     // === Lifecycle ===
     onMounted(async () => {
       // Initialize connection check
@@ -513,7 +560,8 @@ export default {
       formatTime,
       handleKeydown,
       handleInput,
-      scrollToBottom
+      scrollToBottom,
+      resetTextareaHeight
     }
   }
 }
@@ -635,6 +683,102 @@ export default {
   40% {
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+/* Streaming Status Display */
+.streaming-status {
+  padding: var(--space-3);
+  background: rgba(102, 126, 234, 0.1);
+  border-radius: var(--border-radius-md);
+  border-left: 3px solid var(--color-primary);
+  min-width: 280px;
+}
+
+.status-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-2);
+}
+
+.status-text {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-medium);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.status-progress {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-bold);
+}
+
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-primary), #8b5cf6);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+  position: relative;
+}
+
+.progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Streaming status icon animation */
+.status-text::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  margin-right: var(--space-1);
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
   }
 }
 

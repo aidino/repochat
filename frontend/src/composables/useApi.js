@@ -3,7 +3,7 @@
  * Provides reactive state management cho API calls
  */
 
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, readonly } from 'vue'
 import { apiService } from '@services/api.js'
 import { config } from '@config/environment.js'
 
@@ -254,70 +254,47 @@ export function useRepositoryScanning() {
 }
 
 /**
- * Chat composable cho Q&A functionality
+ * Chat composable cho Q&A functionality (Updated for unified chat system)
  */
 export function useChat() {
   const { loading, error, clearError, handleError } = useApi()
   const messages = ref([])
   const chatHistory = ref([])
   const isTyping = ref(false)
+  const sessionId = ref(null)
+  const conversationState = ref('greeting')
+  
+  // Real-time status states
+  const currentStatus = ref('')
+  const statusProgress = ref(0)
+  const isStreaming = ref(false)
 
   const sendMessage = async (message, repositoryContext = null) => {
     if (loading.value || !message.trim()) return
-
-    // Add user message immediately
-    const userMessage = {
-      id: Date.now(),
-      content: message,
-      role: 'user',
-      timestamp: new Date().toISOString()
-    }
-    messages.value.push(userMessage)
 
     loading.value = true
     isTyping.value = true
     clearError()
 
     try {
-      const response = await apiService.sendChatMessage(message, repositoryContext)
+      const response = await apiService.sendChatMessage(message, sessionId.value, repositoryContext)
       
       if (response.success) {
-        // Add bot response
-        const botMessage = {
-          id: Date.now() + 1,
-          content: response.data.response || response.data.message,
-          role: 'assistant',
-          timestamp: new Date().toISOString(),
-          metadata: response.data.metadata
-        }
-        messages.value.push(botMessage)
+        // Update session info
+        sessionId.value = response.data.session_id
+        conversationState.value = response.data.conversation_state
+        
+        // Update messages from response (includes both user and bot messages)
+        messages.value = response.data.messages || []
+        
+        return response
       } else {
-        // Add error message
-        const errorMessage = {
-          id: Date.now() + 1,
-          content: `Lỗi: ${response.error}`,
-          role: 'assistant',
-          timestamp: new Date().toISOString(),
-          isError: true
-        }
-        messages.value.push(errorMessage)
         error.value = response.error
+        return response
       }
       
-      return response
     } catch (err) {
       handleError(err)
-      
-      // Add error message to chat
-      const errorMessage = {
-        id: Date.now() + 1,
-        content: `Lỗi kết nối: ${apiService.getErrorMessage(err)}`,
-        role: 'assistant',
-        timestamp: new Date().toISOString(),
-        isError: true
-      }
-      messages.value.push(errorMessage)
-      
       return { success: false, error: error.value }
     } finally {
       loading.value = false
@@ -325,27 +302,105 @@ export function useChat() {
     }
   }
 
+  const sendMessageStream = async (message, repositoryContext = null) => {
+    if (isStreaming.value || !message.trim()) return
+
+    isStreaming.value = true
+    isTyping.value = true
+    currentStatus.value = 'Đang bắt đầu...'
+    statusProgress.value = 0
+    clearError()
+
+    try {
+      const response = await apiService.streamChatMessage(
+        message,
+        sessionId.value,
+        repositoryContext,
+        // onStatusUpdate callback
+        (statusData) => {
+          currentStatus.value = statusData.status
+          statusProgress.value = statusData.progress
+        },
+        // onComplete callback
+        (completeData) => {
+          // Update session info
+          sessionId.value = completeData.session_id
+          conversationState.value = completeData.conversation_state
+          
+          // Add bot response to messages
+          const botMessage = {
+            id: completeData.bot_response.id,
+            content: completeData.bot_response.content,
+            role: completeData.bot_response.role,
+            timestamp: completeData.bot_response.timestamp,
+            message_type: completeData.bot_response.message_type,
+            context: completeData.bot_response.context
+          }
+          
+          // Find user message and add bot response
+          const userMessage = {
+            id: Date.now() - 1000, // Approximate user message ID
+            content: message,
+            role: 'user',
+            timestamp: new Date().toISOString(),
+            message_type: 'user_input'
+          }
+          
+          // Update messages array
+          messages.value = [...messages.value, userMessage, botMessage]
+          
+          // Clear status
+          currentStatus.value = ''
+          statusProgress.value = 100
+          isTyping.value = false
+          isStreaming.value = false
+        },
+        // onError callback
+        (errorData) => {
+          error.value = errorData.error || 'Đã xảy ra lỗi khi streaming'
+          currentStatus.value = 'Lỗi'
+          statusProgress.value = 0
+          isTyping.value = false
+          isStreaming.value = false
+        }
+      )
+      
+      return response
+      
+    } catch (err) {
+      handleError(err)
+      currentStatus.value = 'Lỗi'
+      statusProgress.value = 0
+      isTyping.value = false
+      isStreaming.value = false
+      return { success: false, error: error.value }
+    }
+  }
+
   const askQuestion = async (question, repositoryContext = null) => {
-    if (loading.value || !question.trim()) return
+    // Q&A now uses the unified chat system
+    return sendMessage(question, repositoryContext)
+  }
+
+  const askQuestionStream = async (question, repositoryContext = null) => {
+    // Q&A streaming version
+    return sendMessageStream(question, repositoryContext)
+  }
+
+  const loadChatHistory = async (sessionIdParam = null) => {
+    const targetSessionId = sessionIdParam || sessionId.value
+    if (!targetSessionId) return { success: false, error: 'No session ID provided' }
 
     loading.value = true
     clearError()
 
     try {
-      const response = await apiService.askQuestion(question, repositoryContext)
+      const response = await apiService.getChatHistory(targetSessionId)
       
       if (response.success) {
-        // Add Q&A pair to messages
-        const qaMessage = {
-          id: Date.now(),
-          content: response.data.answer || response.data.response,
-          role: 'assistant',
-          timestamp: new Date().toISOString(),
-          type: 'qa_response',
-          question: question,
-          metadata: response.data.metadata
-        }
-        messages.value.push(qaMessage)
+        messages.value = response.data.messages || []
+        conversationState.value = response.data.state || 'greeting'
+        sessionId.value = targetSessionId
       } else {
         error.value = response.error
       }
@@ -359,19 +414,18 @@ export function useChat() {
     }
   }
 
-  const loadChatHistory = async (sessionId = null) => {
+  const executeTaskFromChat = async () => {
+    if (!sessionId.value) return { success: false, error: 'No active session' }
+
     loading.value = true
     clearError()
 
     try {
-      const response = await apiService.getChatHistory(sessionId)
+      const response = await apiService.executeTaskFromChat(sessionId.value)
       
       if (response.success) {
-        chatHistory.value = response.data.history || []
-        // Optionally load into current messages
-        if (response.data.current_session) {
-          messages.value = response.data.current_session
-        }
+        // Reload chat to get system message about task execution
+        await loadChatHistory(sessionId.value)
       } else {
         error.value = response.error
       }
@@ -387,7 +441,14 @@ export function useChat() {
 
   const clearMessages = () => {
     messages.value = []
+    sessionId.value = null
+    conversationState.value = 'greeting'
     clearError()
+  }
+
+  const startNewSession = () => {
+    clearMessages()
+    // New session will be created on first message
   }
 
   return {
@@ -396,11 +457,21 @@ export function useChat() {
     messages,
     chatHistory,
     isTyping,
+    sessionId: readonly(sessionId),
+    conversationState: readonly(conversationState),
     sendMessage,
+    sendMessageStream,
     askQuestion,
+    askQuestionStream,
     loadChatHistory,
+    executeTaskFromChat,
     clearMessages,
-    clearError
+    startNewSession,
+    clearError,
+    // Streaming states
+    currentStatus: readonly(currentStatus),
+    statusProgress: readonly(statusProgress),
+    isStreaming: readonly(isStreaming)
   }
 }
 
@@ -412,12 +483,12 @@ export function useSettings() {
   const settings = ref({})
   const isDirty = ref(false)
 
-  const loadSettings = async () => {
+  const loadSettings = async (userId = 'user123') => {
     loading.value = true
     clearError()
 
     try {
-      const response = await apiService.getSettings()
+      const response = await apiService.getSettings(userId)
       
       if (response.success) {
         settings.value = response.data
@@ -438,14 +509,14 @@ export function useSettings() {
     }
   }
 
-  const saveSettings = async (newSettings = null) => {
+  const saveSettings = async (newSettings = null, userId = 'user123') => {
     const settingsToSave = newSettings || settings.value
     
     loading.value = true
     clearError()
 
     try {
-      const response = await apiService.updateSettings(settingsToSave)
+      const response = await apiService.updateSettings(settingsToSave, userId)
       
       if (response.success) {
         settings.value = response.data

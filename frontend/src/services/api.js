@@ -202,20 +202,20 @@ export const apiService = {
     }
   },
 
-  // === Chat Operations ===
+  // === Chat Operations (Updated for Q&A Integration) ===
 
   /**
-   * Send chat message for repository analysis
+   * Send chat message for Q&A conversation
    */
-  async sendChatMessage(message, repositoryContext = null) {
+  async sendChatMessage(message, sessionId = null, repositoryContext = null) {
     try {
       const payload = {
         message,
-        context: repositoryContext,
-        timestamp: new Date().toISOString()
+        session_id: sessionId,
+        repository_context: repositoryContext
       }
       
-      const response = await apiClient.post('/api/chat/message', payload)
+      const response = await apiClient.post('/chat', payload)
       return {
         success: true,
         data: response.data
@@ -229,38 +229,81 @@ export const apiService = {
   },
 
   /**
-   * Get chat history
+   * Stream chat message với real-time status updates
    */
-  async getChatHistory(sessionId = null) {
-    try {
-      const params = sessionId ? { session_id: sessionId } : {}
-      const response = await apiClient.get('/api/chat/history', { params })
-      return {
-        success: true,
-        data: response.data
-      }
-    } catch (error) {
-      return {
-        success: false,
-        error: this.getErrorMessage(error)
-      }
-    }
-  },
-
-  // === Q&A Operations ===
-
-  /**
-   * Ask question about codebase
-   */
-  async askQuestion(question, repositoryContext = null) {
+  async streamChatMessage(message, sessionId = null, repositoryContext = null, onStatusUpdate = null, onComplete = null, onError = null) {
     try {
       const payload = {
-        question,
-        context: repositoryContext,
-        timestamp: new Date().toISOString()
+        message,
+        session_id: sessionId,
+        repository_context: repositoryContext
       }
       
-      const response = await apiClient.post('/api/qa/ask', payload)
+      const response = await fetch(`${config.api.baseURL}/chat/stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'text/event-stream',
+        },
+        body: JSON.stringify(payload)
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read()
+          
+          if (done) break
+
+          const chunk = decoder.decode(value)
+          const lines = chunk.split('\n')
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6))
+                
+                if (data.type === 'status' && onStatusUpdate) {
+                  onStatusUpdate(data)
+                } else if (data.type === 'complete' && onComplete) {
+                  onComplete(data)
+                } else if (data.type === 'error' && onError) {
+                  onError(data)
+                }
+              } catch (parseError) {
+                console.warn('Failed to parse SSE data:', line, parseError)
+              }
+            }
+          }
+        }
+      } finally {
+        reader.releaseLock()
+      }
+
+      return { success: true }
+    } catch (error) {
+      if (onError) {
+        onError({ error: this.getErrorMessage(error) })
+      }
+      return {
+        success: false,
+        error: this.getErrorMessage(error)
+      }
+    }
+  },
+
+  /**
+   * Get chat history for a session
+   */
+  async getChatHistory(sessionId) {
+    try {
+      const response = await apiClient.get(`/chat/${sessionId}/history`)
       return {
         success: true,
         data: response.data
@@ -271,6 +314,70 @@ export const apiService = {
         error: this.getErrorMessage(error)
       }
     }
+  },
+
+  /**
+   * Execute task from chat session
+   */
+  async executeTaskFromChat(sessionId) {
+    try {
+      const response = await apiClient.post(`/chat/${sessionId}/execute`)
+      return {
+        success: true,
+        data: response.data
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: this.getErrorMessage(error)
+      }
+    }
+  },
+
+  /**
+   * List all chat sessions
+   */
+  async getChatSessions() {
+    try {
+      const response = await apiClient.get('/chat/sessions')
+      return {
+        success: true,
+        data: response.data
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: this.getErrorMessage(error)
+      }
+    }
+  },
+
+  /**
+   * Delete chat session
+   */
+  async deleteChatSession(sessionId) {
+    try {
+      const response = await apiClient.delete(`/chat/${sessionId}`)
+      return {
+        success: true,
+        data: response.data
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: this.getErrorMessage(error)
+      }
+    }
+  },
+
+  // === Q&A Operations (Unified with Chat) ===
+
+  /**
+   * Ask question about codebase (now uses unified chat endpoint)
+   */
+  async askQuestion(question, sessionId = null, repositoryContext = null) {
+    // Q&A is now handled through the unified chat system
+    return this.sendChatMessage(question, sessionId, repositoryContext)
   },
 
   // === Settings Operations ===
@@ -278,9 +385,9 @@ export const apiService = {
   /**
    * Get user settings
    */
-  async getSettings() {
+  async getSettings(userId = 'user123') {
     try {
-      const response = await apiClient.get('/api/settings')
+      const response = await apiClient.get(`/users/${userId}/settings`)
       return {
         success: true,
         data: response.data
@@ -296,9 +403,9 @@ export const apiService = {
   /**
    * Update user settings
    */
-  async updateSettings(settings) {
+  async updateSettings(settings, userId = 'user123') {
     try {
-      const response = await apiClient.put('/api/settings', settings)
+      const response = await apiClient.put(`/users/${userId}/settings`, settings)
       return {
         success: true,
         data: response.data

@@ -46,8 +46,153 @@
     <main class="settings-content">
       <div class="settings-container">
         
+        <!-- Settings Tabs -->
+        <div class="settings-tabs">
+          <button 
+            v-for="tab in tabs" 
+            :key="tab.id"
+            @click="activeTab = tab.id"
+            :class="['tab-button', { active: activeTab === tab.id }]"
+          >
+            <span class="tab-icon">{{ tab.icon }}</span>
+            <span class="tab-label">{{ tab.label }}</span>
+          </button>
+        </div>
+
+        <!-- API Keys Tab -->
+        <section v-if="activeTab === 'api-keys'" class="settings-section">
+          <div class="section-header">
+            <h2 class="section-title">🔑 API Keys Management</h2>
+            <p class="section-description">
+              Quản lý API keys cho các nhà cung cấp AI. Dữ liệu được mã hóa và bảo mật.
+            </p>
+          </div>
+
+          <!-- Add New API Key -->
+          <div class="api-key-form">
+            <h3 class="form-title">Thêm API Key mới</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="provider-select">Nhà cung cấp</label>
+                <select 
+                  id="provider-select"
+                  v-model="newApiKey.provider"
+                  class="form-input"
+                >
+                  <option value="">Chọn nhà cung cấp</option>
+                  <option v-for="provider in availableProviders" :key="provider.provider" :value="provider.provider">
+                    {{ provider.name }}
+                  </option>
+                </select>
+              </div>
+              
+              <div class="form-group">
+                <label for="api-key-input">API Key</label>
+                <input 
+                  id="api-key-input"
+                  v-model="newApiKey.api_key"
+                  type="password"
+                  class="form-input"
+                  placeholder="Nhập API key..."
+                />
+              </div>
+              
+              <div class="form-group">
+                <label for="nickname-input">Tên gọi (tùy chọn)</label>
+                <input 
+                  id="nickname-input"
+                  v-model="newApiKey.nickname"
+                  type="text"
+                  class="form-input"
+                  placeholder="VD: My OpenAI Key"
+                />
+              </div>
+            </div>
+            
+            <div class="form-actions">
+              <button 
+                @click="addApiKey"
+                :disabled="!newApiKey.provider || !newApiKey.api_key || loading"
+                class="btn btn-primary"
+              >
+                <span class="icon">➕</span>
+                {{ loading ? 'Đang thêm...' : 'Thêm API Key' }}
+              </button>
+              
+              <button 
+                @click="clearApiKeyForm"
+                class="btn btn-secondary"
+              >
+                <span class="icon">❌</span>
+                Hủy
+              </button>
+            </div>
+          </div>
+
+          <!-- Current API Keys -->
+          <div class="api-keys-list">
+            <h3 class="list-title">API Keys hiện tại</h3>
+            
+            <div v-if="userApiKeys.length === 0" class="empty-state">
+              <span class="empty-icon">🔑</span>
+              <p class="empty-text">Chưa có API key nào được cấu hình</p>
+              <p class="empty-description">Thêm API key để sử dụng các model AI khác nhau</p>
+            </div>
+            
+            <div v-else class="api-key-items">
+              <div 
+                v-for="apiKey in userApiKeys" 
+                :key="apiKey.provider"
+                class="api-key-item"
+              >
+                <div class="api-key-info">
+                  <div class="api-key-icon">
+                    <span>🤖</span>
+                  </div>
+                  <div class="api-key-details">
+                    <h4 class="api-key-name">
+                      {{ getProviderName(apiKey.provider) }}
+                      <span v-if="apiKey.nickname" class="api-key-nickname">({{ apiKey.nickname }})</span>
+                    </h4>
+                    <p class="api-key-meta">
+                      Thêm vào: {{ formatDate(apiKey.created_at) }}
+                      <span v-if="apiKey.last_used" class="last-used">
+                        • Sử dụng lần cuối: {{ formatDate(apiKey.last_used) }}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+                
+                <div class="api-key-actions">
+                  <span 
+                    :class="['status-badge', apiKey.is_valid ? 'valid' : 'invalid']"
+                  >
+                    {{ apiKey.is_valid ? 'Hoạt động' : 'Lỗi' }}
+                  </span>
+                  
+                  <button 
+                    @click="testApiKey(apiKey.provider)"
+                    class="btn btn-sm btn-outline"
+                  >
+                    <span class="icon">🧪</span>
+                    Test
+                  </button>
+                  
+                  <button 
+                    @click="removeApiKey(apiKey.provider)"
+                    class="btn btn-sm btn-danger"
+                  >
+                    <span class="icon">🗑️</span>
+                    Xóa
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        
         <!-- LLM Configuration Section -->
-        <section class="settings-section">
+        <section v-if="activeTab === 'llm-models'" class="settings-section">
           <div class="section-header">
             <h2 class="section-title">🤖 Cấu Hình Model LLM</h2>
             <p class="section-description">
@@ -310,6 +455,24 @@ export default {
     const lastSavedTime = ref(null)
     const showSuccessToast = ref(false)
 
+    // Tabs state
+    const activeTab = ref('api-keys')
+    const tabs = ref([
+      { id: 'api-keys', icon: '🔑', label: 'API Keys' },
+      { id: 'llm-models', icon: '🤖', label: 'LLM Models' },
+      { id: 'preferences', icon: '⚙️', label: 'Preferences' }
+    ])
+
+    // API Keys state
+    const userId = ref('user123') // TODO: Get from auth
+    const availableProviders = ref([])
+    const userApiKeys = ref([])
+    const newApiKey = ref({
+      provider: '',
+      api_key: '',
+      nickname: ''
+    })
+
     // Available LLM models
     const availableModels = ref([
       {
@@ -450,11 +613,122 @@ export default {
       }
     }, { deep: true })
 
+    // API Keys methods
+    const loadAvailableProviders = async () => {
+      try {
+        const response = await fetch('http://localhost:8000/api-providers')
+        const data = await response.json()
+        availableProviders.value = data.providers
+      } catch (err) {
+        console.error('Error loading providers:', err)
+      }
+    }
+
+    const loadUserApiKeys = async () => {
+      try {
+        const response = await fetch(`http://localhost:8000/users/${userId.value}/api-keys`)
+        const data = await response.json()
+        userApiKeys.value = data.api_keys
+      } catch (err) {
+        console.error('Error loading API keys:', err)
+      }
+    }
+
+    const addApiKey = async () => {
+      if (!newApiKey.value.provider || !newApiKey.value.api_key) {
+        alert('Vui lòng điền đầy đủ thông tin')
+        return
+      }
+
+      try {
+        const response = await fetch(`http://localhost:8000/users/${userId.value}/api-keys`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(newApiKey.value)
+        })
+
+        if (response.ok) {
+          showSuccessToast.value = true
+          setTimeout(() => { showSuccessToast.value = false }, 3000)
+          
+          clearApiKeyForm()
+          await loadUserApiKeys()
+        } else {
+          alert('Lỗi khi thêm API key')
+        }
+      } catch (err) {
+        console.error('Error adding API key:', err)
+        alert('Lỗi khi thêm API key')
+      }
+    }
+
+    const removeApiKey = async (provider) => {
+      if (!confirm('Bạn có chắc muốn xóa API key này?')) return
+
+      try {
+        const response = await fetch(`http://localhost:8000/users/${userId.value}/api-keys/${provider}`, {
+          method: 'DELETE'
+        })
+
+        if (response.ok) {
+          showSuccessToast.value = true
+          setTimeout(() => { showSuccessToast.value = false }, 3000)
+          
+          await loadUserApiKeys()
+        } else {
+          alert('Lỗi khi xóa API key')
+        }
+      } catch (err) {
+        console.error('Error removing API key:', err)
+        alert('Lỗi khi xóa API key')
+      }
+    }
+
+    const testApiKey = async (provider) => {
+      try {
+        const response = await fetch(`http://localhost:8000/users/${userId.value}/api-keys/${provider}/test`)
+        const data = await response.json()
+        
+        if (data.is_valid) {
+          alert(`API key ${provider} hoạt động tốt`)
+        } else {
+          alert(`API key ${provider} có lỗi: ${data.error_message}`)
+        }
+      } catch (err) {
+        console.error('Error testing API key:', err)
+        alert('Lỗi khi test API key')
+      }
+    }
+
+    const clearApiKeyForm = () => {
+      newApiKey.value = {
+        provider: '',
+        api_key: '',
+        nickname: ''
+      }
+    }
+
+    const getProviderName = (provider) => {
+      const found = availableProviders.value.find(p => p.provider === provider)
+      return found ? found.name : provider
+    }
+
+    const formatDate = (dateString) => {
+      return new Date(dateString).toLocaleDateString('vi-VN')
+    }
+
     // Lifecycle
     onMounted(async () => {
       try {
-        await loadSettings()
-        // Store original settings for modification tracking
+        await Promise.all([
+          loadSettings(),
+          loadAvailableProviders(),
+          loadUserApiKeys()
+        ])
+        
+        // Store original settings for comparison
         originalSettings.value = { ...settings }
         hasModifications.value = false
       } catch (err) {
@@ -476,6 +750,16 @@ export default {
       showSuccessToast,
       availableModels,
       
+      // Tabs state
+      activeTab,
+      tabs,
+      
+      // API Keys state
+      userId,
+      availableProviders,
+      userApiKeys,
+      newApiKey,
+      
       // Computed
       getModelInfo,
       
@@ -485,7 +769,17 @@ export default {
       resetToDefaults,
       discardChanges,
       saveSettings,
-      formatTime
+      formatTime,
+      
+      // API Keys methods
+      loadAvailableProviders,
+      loadUserApiKeys,
+      addApiKey,
+      removeApiKey,
+      testApiKey,
+      clearApiKeyForm,
+      getProviderName,
+      formatDate
     }
   }
 }
@@ -543,6 +837,243 @@ export default {
   color: var(--color-text-primary);
   z-index: 1000;
   box-shadow: var(--shadow-lg);
+}
+
+/* Settings Tabs */
+.settings-tabs {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tab-button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: var(--font-size-sm);
+}
+
+.tab-button:hover {
+  color: var(--color-text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.tab-button.active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+.tab-icon {
+  font-size: 1.2em;
+}
+
+/* API Key Form */
+.api-key-form {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--border-radius-md);
+  padding: var(--space-4);
+  margin-bottom: var(--space-6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.form-title {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  margin: 0 0 var(--space-3) 0;
+  color: var(--color-text-primary);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.form-group label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+}
+
+.form-input {
+  padding: var(--space-2) var(--space-3);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--border-radius-sm);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  transition: border-color 0.2s ease;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.form-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* API Keys List */
+.api-keys-list {
+  margin-top: var(--space-4);
+}
+
+.list-title {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  margin: 0 0 var(--space-3) 0;
+  color: var(--color-text-primary);
+}
+
+.empty-state {
+  text-align: center;
+  padding: var(--space-8) var(--space-4);
+  color: var(--color-text-secondary);
+}
+
+.empty-icon {
+  font-size: 3em;
+  display: block;
+  margin-bottom: var(--space-2);
+}
+
+.empty-text {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  margin: 0 0 var(--space-1) 0;
+  color: var(--color-text-primary);
+}
+
+.empty-description {
+  font-size: var(--font-size-sm);
+  margin: 0;
+}
+
+.api-key-items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.api-key-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--border-radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.api-key-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.api-key-icon {
+  width: 40px;
+  height: 40px;
+  background: rgba(102, 126, 234, 0.2);
+  border-radius: var(--border-radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2em;
+}
+
+.api-key-details {
+  flex: 1;
+}
+
+.api-key-name {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  margin: 0 0 var(--space-1) 0;
+  color: var(--color-text-primary);
+}
+
+.api-key-nickname {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-normal);
+  color: var(--color-text-secondary);
+}
+
+.api-key-meta {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.last-used {
+  margin-left: var(--space-2);
+}
+
+.api-key-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.status-badge {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-badge.valid {
+  background: rgba(34, 197, 94, 0.2);
+  color: rgb(34, 197, 94);
+}
+
+.status-badge.invalid {
+  background: rgba(239, 68, 68, 0.2);
+  color: rgb(239, 68, 68);
+}
+
+.btn-sm {
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--font-size-xs);
+}
+
+.btn-outline {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--color-text-primary);
+}
+
+.btn-outline:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.btn-danger {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: rgb(239, 68, 68);
+}
+
+.btn-danger:hover {
+  background: rgba(239, 68, 68, 0.3);
 }
 
 /* Existing styles would remain the same */

@@ -15,12 +15,16 @@ prometheus-client>=0.19.0
 # PHASE 2: Enhanced Workflow Engine Dependencies  
 # =============================================================================
 
-# Langchain ecosystem - Latest compatible versions
+# Langchain ecosystem - Latest compatible versions for multi-agent optimization
 langchain==0.3.25
 langgraph==0.4.8
 langchain-core==0.3.64
 langchain-community==0.3.24
 langchain-openai==0.3.19
+
+# Google Agent Development Kit và A2A Communication (fallback compatible versions)
+google-adk==1.2.1
+a2a-sdk>=0.2.4
 
 # Additional AI providers
 langchain-google-genai==2.1.5
@@ -77,6 +81,9 @@ structlog>=23.2.0,<24.0.0
 
 # Memory management
 psutil>=5.9.0,<6.0.0
+
+# Memory integration for conversation context
+mem0ai>=0.1.0
 
 # Environment
 python-decouple>=3.8,<4.0
